@@ -1,6 +1,11 @@
 # Fragmenta
 
-React NativeとExpoで作成したシンプルなテキスト入力アプリです。
+React NativeとExpoで作成した、GitHubプライベートリポジトリにMarkdownファイルを投稿できるアプリです。
+
+## 概要
+
+Fragmentaは、テキスト入力をGitHub上のプライベートリポジトリに自動的にMarkdownファイルとして保存できるモバイルアプリケーションです。
+メモやアイデアを素早く記録し、GitHubで管理したい方に最適です。
 
 ## 技術スタック
 
@@ -8,15 +13,31 @@ React NativeとExpoで作成したシンプルなテキスト入力アプリで�
 - **Expo**: SDK 54
 - **TypeScript**: 5.9.2
 - **React Native Paper**: 5.14.5 (Material Design 3対応)
-- **React Native Safe Area Context**: 5.6.1
+- **React Navigation**: Bottom Tabs
+- **Octokit**: GitHub API クライアント
+- **AsyncStorage**: ローカルデータ永続化
+- **Expo Secure Store**: トークンの安全な保存
 
-## 機能
+## 主な機能
 
-- テキストエリア (複数行入力対応)
-- 送信ボタン
-- レスポンシブレイアウト
-- Safe Area対応 (ノッチ・ホームインジケーター対応)
-- キーボード表示時の自動調整
+### 📝 ホーム画面
+- テキスト入力 (複数行対応)
+- GitHubへの自動送信
+- 下書き自動保存機能
+- エラーハンドリング&自動リトライ
+- ローディング表示
+
+### 📚 履歴画面
+- 送信履歴の一覧表示
+- GitHub上のファイルへのリンク
+- 履歴削除機能
+- Pull to Refresh
+
+### ⚙️ 設定画面
+- GitHub Personal Access Token設定
+- リポジトリ情報設定
+- 設定の検証機能
+- セキュアな認証情報管理
 
 ## セットアップ
 
@@ -59,58 +80,114 @@ npm run web
 2. `npm start`を実行
 3. 表示されるQRコードをExpo Goアプリでスキャン
 
+## GitHub設定 (初回のみ)
+
+アプリを初めて使用する際は、以下の手順で設定してください。
+
+### 1. Personal Access Tokenの作成
+
+**Fine-grained tokens (推奨)** を使用してください:
+
+1. GitHubにログイン
+2. Settings > Developer settings > Personal access tokens > **Fine-grained tokens**
+3. "Generate new token" をクリック
+4. 以下を設定:
+   - **Token name**: `Fragmenta App` (わかりやすい名前)
+   - **Expiration**: 90日程度を推奨 (最大366日)
+   - **Repository access**: `Only select repositories` を選択して、投稿先リポジトリを指定
+   - **Repository permissions**:
+     - `Contents`: **Read and write** ✅ (必須)
+     - `Metadata`: **Read only** (自動選択)
+5. "Generate token" をクリック
+6. トークンをコピー (一度しか表示されません!)
+
+<details>
+<summary>Classic Tokensを使う場合 (非推奨)</summary>
+
+1. Settings > Developer settings > Personal access tokens > Tokens (classic)
+2. "Generate new token (classic)" をクリック
+3. スコープ: `repo` (Full control of private repositories)
+4. トークンを生成してコピー
+
+**注意**: Classic tokensはセキュリティリスクが高いため、Fine-grained tokensの使用を強く推奨します。
+</details>
+
+### 2. アプリでの設定
+
+1. アプリの「設定」タブを開く
+2. 以下の情報を入力:
+   - **Personal Access Token**: 先ほどコピーしたトークン
+   - **リポジトリオーナー**: GitHubユーザー名または組織名
+   - **リポジトリ名**: 投稿先のリポジトリ名
+   - **保存先フォルダパス**: ファイルを保存するフォルダ (例: `notes`)
+   - **ブランチ名**: 通常は `main` または `master`
+3. 「設定を保存」をタップ
+4. 設定が自動的に検証されます
+
+## 使い方
+
+### テキストを送信する
+
+1. 「ホーム」タブでテキストを入力
+2. 「GitHubに送信」ボタンをタップ
+3. 自動的に `yyyymmddhhmmss.md` という名前でファイルが作成されます
+
+### 送信履歴を確認する
+
+1. 「履歴」タブを開く
+2. 過去の送信履歴が一覧表示されます
+3. アイテムをタップするとGitHub上のファイルを開けます
+
 ## プロジェクト構成
 
 ```
 fragmenta/
-├── App.tsx                 # メインアプリケーションコンポーネント
-├── app.json               # Expo設定ファイル
-├── package.json           # プロジェクト依存関係
-├── tsconfig.json          # TypeScript設定
-└── README.md              # このファイル
+├── App.tsx                          # メインアプリ (Navigation設定)
+├── src/
+│   ├── components/
+│   │   ├── ErrorDialog.tsx          # エラーダイアログ
+│   │   └── LoadingOverlay.tsx       # ローディング表示
+│   ├── screens/
+│   │   ├── HomeScreen.tsx           # ホーム画面
+│   │   ├── HistoryScreen.tsx        # 履歴画面
+│   │   └── SettingsScreen.tsx       # 設定画面
+│   ├── services/
+│   │   ├── githubService.ts         # GitHub API連携
+│   │   └── storageService.ts        # ローカルストレージ管理
+│   ├── types/
+│   │   └── index.ts                 # TypeScript型定義
+│   └── utils/
+│       └── dateFormatter.ts         # 日時フォーマット
+├── app.json                         # Expo設定
+├── package.json                     # 依存関係
+├── tsconfig.json                    # TypeScript設定
+└── README.md                        # このファイル
 ```
 
-## コード概要
+## アーキテクチャ
 
-### App.tsx
+### データフロー
 
-メインコンポーネントには以下が実装されています:
+1. **ユーザー入力** → HomeScreen
+2. **下書き保存** → StorageService (AsyncStorage)
+3. **送信** → GitHubService → GitHub API
+4. **履歴保存** → StorageService (AsyncStorage)
+5. **履歴表示** → HistoryScreen
 
-- **State管理**: `useState`でテキスト入力の状態管理
-- **TextInput**: React Native Paperのアウトラインスタイルテキストエリア
-- **Button**: Material Design 3スタイルの送信ボタン
-- **レイアウト**: SafeAreaView + KeyboardAvoidingViewで快適なUX
+### ストレージ
 
-### 送信ボタンの処理
+- **SecureStore**: Personal Access Token (暗号化)
+- **AsyncStorage**:
+  - GitHub設定 (トークン以外)
+  - 下書きデータ
+  - 送信履歴
+  - アプリ設定
 
-現在、送信ボタンの`handleSubmit`関数は以下のように実装されています:
+### エラーハンドリング
 
-```typescript
-const handleSubmit = () => {
-  // 処理ロジックは未実装
-  console.log('Submit button pressed');
-};
-```
-
-実際の処理ロジックを追加する場合は、この関数内に実装してください。
-
-## カスタマイズ
-
-### テーマの変更
-
-[App.tsx](App.tsx)の`MD3LightTheme`を`MD3DarkTheme`に変更することで、ダークモードに対応できます:
-
-```typescript
-import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
-
-// ...
-
-<PaperProvider theme={MD3DarkTheme}>
-```
-
-### スタイルの調整
-
-`styles`オブジェクト内のStyleSheetを編集することで、レイアウトや色を変更できます。
+- ネットワークエラー時の自動リトライ (最大3回)
+- エラーダイアログでユーザーに通知
+- リトライ可能なエラーには再試行ボタンを表示
 
 ## トラブルシューティング
 
@@ -133,15 +210,26 @@ Xcodeがインストールされていることを確認してください:
 xcode-select --install
 ```
 
+## セキュリティに関する注意事項
+
+- Personal Access Tokenは**絶対に公開しないでください**
+- **Fine-grained tokens を使用**してください(Classic tokensより安全)
+- トークンはExpo Secure Storeで暗号化して保存されます
+- リポジトリはプライベートリポジトリの使用を推奨します
+- トークンには**必要最小限の権限**のみを付与:
+  - Fine-grained: `Contents: Read and write` のみ
+  - Classic: `repo` スコープのみ
+- トークンに**有効期限を設定**してください(90日推奨)
+
+## 今後の拡張案
+
+- [ ] Markdown プレビュー機能
+- [ ] タグ・カテゴリー機能
+- [ ] 検索機能
+- [ ] 複数リポジトリ対応
+- [ ] ダークモード対応
+- [ ] オフライン時のキュー機能
+
 ## ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
-
-## 次のステップ
-
-- [ ] 送信ボタンの処理ロジック実装
-- [ ] API連携
-- [ ] データ永続化 (AsyncStorage)
-- [ ] フォームバリデーション
-- [ ] エラーハンドリング
-- [ ] ローディング状態の表示
+このプロジェクトはMITライセンスの下で公開されています。

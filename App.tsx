@@ -1,76 +1,62 @@
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
-import { PaperProvider, TextInput, Button, MD3LightTheme } from 'react-native-paper';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { HistoryScreen } from './src/screens/HistoryScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [text, setText] = useState('');
-
-  const handleSubmit = () => {
-    // 処理ロジックは未実装
-    console.log('Submit button pressed');
-  };
-
   return (
     <SafeAreaProvider>
       <PaperProvider theme={MD3LightTheme}>
-        <SafeAreaView style={styles.safeArea}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.container}
+        <NavigationContainer>
+          <Tab.Navigator
+            initialRouteName="Home"
+            screenOptions={{
+              tabBarActiveTintColor: '#6200ee',
+              tabBarInactiveTintColor: 'gray',
+            }}
           >
-            <View style={styles.content}>
-              <TextInput
-                label="メッセージを入力"
-                value={text}
-                onChangeText={setText}
-                mode="outlined"
-                multiline
-                numberOfLines={8}
-                style={styles.textInput}
-                placeholder="ここにテキストを入力してください"
-              />
-
-              <Button
-                mode="contained"
-                onPress={handleSubmit}
-                style={styles.button}
-                contentStyle={styles.buttonContent}
-              >
-                送信
-              </Button>
-            </View>
-          </KeyboardAvoidingView>
+            <Tab.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{
+                title: 'ホーム',
+                tabBarIcon: ({ color, size }) => (
+                  <MaterialCommunityIcons name="home" color={color} size={Number(size)} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="History"
+              component={HistoryScreen}
+              options={{
+                title: '履歴',
+                tabBarIcon: ({ color, size }) => (
+                  <MaterialCommunityIcons name="history" color={color} size={Number(size)} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{
+                title: '設定',
+                tabBarIcon: ({ color, size }) => (
+                  <MaterialCommunityIcons name="cog" color={color} size={Number(size)} />
+                ),
+              }}
+            />
+          </Tab.Navigator>
           <StatusBar style="auto" />
-        </SafeAreaView>
+        </NavigationContainer>
       </PaperProvider>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    gap: 16,
-  },
-  textInput: {
-    backgroundColor: '#ffffff',
-    minHeight: 150,
-  },
-  button: {
-    marginTop: 8,
-  },
-  buttonContent: {
-    paddingVertical: 8,
-  },
-});
