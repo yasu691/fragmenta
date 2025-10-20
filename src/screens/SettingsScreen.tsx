@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, Alert } from 'react-native';
-import { TextInput, Button, Text, Divider } from 'react-native-paper';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, ScrollView, View, Alert, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { TextInput, Button, Text, Divider, Card, IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { storageService } from '../services/storageService';
 import { githubService } from '../services/githubService';
-import { GitHubConfig } from '../types';
+import { GitHubConfig, Tag } from '../types';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 
 export const SettingsScreen: React.FC = () => {
@@ -16,8 +16,17 @@ export const SettingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // タグ管理用の状態
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+
+  // スクロール制御用
+  const scrollViewRef = useRef<ScrollView>(null);
+
   useEffect(() => {
     loadSettings();
+    loadTags();
   }, []);
 
   const loadSettings = async () => {
@@ -35,6 +44,15 @@ export const SettingsScreen: React.FC = () => {
       Alert.alert('エラー', '設定の読み込みに失敗しました');
     } finally {
       setIsInitializing(false);
+    }
+  };
+
+  const loadTags = async () => {
+    try {
+      const loadedTags = await storageService.getTags();
+      setTags(loadedTags.sort((a, b) => a.order - b.order));
+    } catch (error) {
+      Alert.alert('エラー', 'タグの読み込みに失敗しました');
     }
   };
 
@@ -110,13 +128,59 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
+  // タグ追加
+  const handleAddTag = async () => {
+    if (!newTagName.trim()) {
+      Alert.alert('エラー', 'タグ名を入力してください');
+      return;
+    }
+
+    try {
+      await storageService.addTag(newTagName.trim());
+      await loadTags();
+      setNewTagName('');
+      setShowAddDialog(false);
+      Alert.alert('成功', 'タグを追加しました');
+    } catch (error: any) {
+      Alert.alert('エラー', error.message || 'タグの追加に失敗しました');
+    }
+  };
+
+  // タグ削除
+  const handleDeleteTag = async (id: string) => {
+    Alert.alert(
+      '確認',
+      'このタグを削除しますか?',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await storageService.deleteTag(id);
+              await loadTags();
+              Alert.alert('成功', 'タグを削除しました');
+            } catch (error: any) {
+              Alert.alert('エラー', 'タグの削除に失敗しました');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (isInitializing) {
     return <LoadingOverlay visible={true} message="設定を読み込み中..." />;
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView ref={scrollViewRef} style={styles.container}>
         <View style={styles.section}>
           <Text variant="titleLarge" style={styles.title}>
             GitHub設定
@@ -202,7 +266,96 @@ export const SettingsScreen: React.FC = () => {
             設定をクリア
           </Button>
         </View>
+
+        <Divider style={styles.divider} />
+
+        {/* タグ管理セクション */}
+        <View style={styles.section}>
+          <View style={styles.tagHeader}>
+            <View>
+              <Text variant="titleLarge" style={styles.title}>
+                タグ管理
+              </Text>
+              <Text variant="bodyMedium" style={styles.description}>
+                投稿時に選択できるタグを管理します。
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              onPress={() => setShowAddDialog(true)}
+              icon="plus"
+            >
+              追加
+            </Button>
+          </View>
+
+          {/* タグ追加カード */}
+          {showAddDialog && (
+            <Card style={styles.addTagCard}>
+              <Card.Content>
+                <Text variant="titleMedium" style={styles.addTagTitle}>
+                  新しいタグを追加
+                </Text>
+                <TextInput
+                  label="タグ名"
+                  value={newTagName}
+                  onChangeText={setNewTagName}
+                  mode="outlined"
+                  placeholder="例: 開発メモ"
+                  style={styles.addTagInput}
+                  onFocus={() => {
+                    // キーボード表示時にスクロール
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 300);
+                  }}
+                />
+                <View style={styles.addTagActions}>
+                  <Button
+                    onPress={() => {
+                      setShowAddDialog(false);
+                      setNewTagName('');
+                    }}
+                    style={styles.addTagButton}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={handleAddTag}
+                    style={styles.addTagButton}
+                  >
+                    追加
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          )}
+
+          {tags.length === 0 ? (
+            <Text style={styles.emptyText}>タグが登録されていません</Text>
+          ) : (
+            <FlatList
+              data={tags}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <Card style={styles.tagCard}>
+                  <Card.Content style={styles.tagCardContent}>
+                    <Text variant="bodyLarge">{item.name}</Text>
+                    <IconButton
+                      icon="delete"
+                      size={20}
+                      onPress={() => handleDeleteTag(item.id)}
+                    />
+                  </Card.Content>
+                </Card>
+              )}
+            />
+          )}
+        </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <LoadingOverlay visible={loading} message="設定を検証中..." />
     </SafeAreaView>
@@ -213,6 +366,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardView: {
+    flex: 1,
   },
   container: {
     flex: 1,
@@ -249,5 +405,46 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     marginBottom: 12,
+  },
+  tagHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999999',
+    marginVertical: 20,
+  },
+  tagCard: {
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  tagCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  addTagCard: {
+    marginBottom: 16,
+    backgroundColor: '#e3f2fd',
+  },
+  addTagTitle: {
+    marginBottom: 12,
+    fontWeight: 'bold',
+  },
+  addTagInput: {
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
+  },
+  addTagActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  addTagButton: {
+    marginLeft: 8,
   },
 });

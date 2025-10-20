@@ -14,6 +14,7 @@ export interface HistoryEntry {
   content: string;
   createdAt: Date;
   githubUrl?: string;
+  tag?: string; // タグ名（オプショナル）
 }
 
 // 下書き保存データ
@@ -42,4 +43,11 @@ export interface AppSettings {
   autoSaveDraft: boolean;
   retryAttempts: number;
   retryDelay: number;
+}
+
+// タグ情報
+export interface Tag {
+  id: string;
+  name: string;
+  order: number; // 表示順序
 }

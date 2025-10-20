@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, FlatList, View, Alert, Linking } from 'react-native';
-import { Text, Card, IconButton, FAB } from 'react-native-paper';
+import { Text, Card, IconButton, FAB, Chip } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { storageService } from '../services/storageService';
@@ -117,6 +117,13 @@ export const HistoryScreen: React.FC = () => {
             onPress={() => handleDelete(item.id)}
           />
         </View>
+        {item.tag && (
+          <View style={styles.tagContainer}>
+            <Chip icon="tag" style={styles.tagChip}>
+              {item.tag}
+            </Chip>
+          </View>
+        )}
         <Text
           variant="bodyMedium"
           style={styles.contentPreview}
@@ -224,5 +231,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#dc3545',
+  },
+  tagContainer: {
+    marginBottom: 8,
+  },
+  tagChip: {
+    alignSelf: 'flex-start',
   },
 });

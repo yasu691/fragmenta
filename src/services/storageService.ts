@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { GitHubConfig, HistoryEntry, DraftData, AppSettings } from '../types';
+import { GitHubConfig, HistoryEntry, DraftData, AppSettings, Tag } from '../types';
 
 // ストレージキー定数
 const KEYS = {
@@ -9,6 +9,7 @@ const KEYS = {
   DRAFT: 'draft_content',
   HISTORY: 'submission_history',
   SETTINGS: 'app_settings',
+  TAGS: 'tags',
 } as const;
 
 export class StorageService {
@@ -180,6 +181,76 @@ export class StorageService {
     return JSON.parse(settingsJson);
   }
 
+  // ========== タグ管理関連 ==========
+
+  /**
+   * タグ一覧を取得
+   */
+  async getTags(): Promise<Tag[]> {
+    const tagsJson = await AsyncStorage.getItem(KEYS.TAGS);
+    if (!tagsJson) {
+      return [];
+    }
+    return JSON.parse(tagsJson);
+  }
+
+  /**
+   * タグ一覧を保存
+   */
+  async saveTags(tags: Tag[]): Promise<void> {
+    await AsyncStorage.setItem(KEYS.TAGS, JSON.stringify(tags));
+  }
+
+  /**
+   * タグを追加
+   */
+  async addTag(name: string): Promise<Tag> {
+    const tags = await this.getTags();
+
+    // 重複チェック
+    if (tags.some(tag => tag.name === name)) {
+      throw new Error('同じ名前のタグが既に存在します');
+    }
+
+    const newTag: Tag = {
+      id: Date.now().toString(),
+      name,
+      order: tags.length, // 最後尾に追加
+    };
+
+    tags.push(newTag);
+    await this.saveTags(tags);
+    return newTag;
+  }
+
+  /**
+   * タグを削除
+   */
+  async deleteTag(id: string): Promise<void> {
+    const tags = await this.getTags();
+    const filteredTags = tags.filter(tag => tag.id !== id);
+
+    // order を振り直し
+    const reorderedTags = filteredTags.map((tag, index) => ({
+      ...tag,
+      order: index,
+    }));
+
+    await this.saveTags(reorderedTags);
+  }
+
+  /**
+   * タグの並び順を変更
+   */
+  async reorderTags(tags: Tag[]): Promise<void> {
+    // order を振り直し
+    const reorderedTags = tags.map((tag, index) => ({
+      ...tag,
+      order: index,
+    }));
+    await this.saveTags(reorderedTags);
+  }
+
   // ========== 全データクリア ==========
 
   /**
@@ -190,6 +261,7 @@ export class StorageService {
     await this.clearDraft();
     await this.clearHistory();
     await AsyncStorage.removeItem(KEYS.SETTINGS);
+    await AsyncStorage.removeItem(KEYS.TAGS);
   }
 }
 

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { StyleSheet, View, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native';
+import { TextInput, Button, Text, Menu } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { storageService } from '../services/storageService';
 import { githubService } from '../services/githubService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ErrorDialog } from '../components/ErrorDialog';
-import { AppError } from '../types';
+import { AppError, Tag } from '../types';
+import { addFrontmatter } from '../utils/frontmatterParser';
 
 interface HomeScreenProps {
   navigation: any;
@@ -19,11 +20,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [error, setError] = useState<AppError | null>(null);
   const [isConfigured, setIsConfigured] = useState(false);
 
+  // タグ関連の状態
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined);
+  const [menuVisible, setMenuVisible] = useState(false);
+
   // 画面がフォーカスされたときに設定をチェック
   useFocusEffect(
     useCallback(() => {
       checkConfiguration();
       loadDraft();
+      loadTags();
     }, [])
   );
 
@@ -53,6 +60,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Failed to load draft:', error);
+    }
+  };
+
+  // タグを読み込む
+  const loadTags = async () => {
+    try {
+      const loadedTags = await storageService.getTags();
+      setTags(loadedTags.sort((a, b) => a.order - b.order));
+    } catch (error) {
+      console.error('Failed to load tags:', error);
     }
   };
 
@@ -119,8 +136,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setError(null);
 
     try {
+      // Frontmatter を追加したコンテンツを作成
+      const contentWithFrontmatter = addFrontmatter(text, selectedTag);
+
       // GitHubにMarkdownファイルを作成
-      const fileUrl = await submitWithRetry(text);
+      const fileUrl = await submitWithRetry(contentWithFrontmatter);
 
       // 履歴に追加
       await storageService.addHistory({
@@ -128,13 +148,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         content: text,
         createdAt: new Date(),
         githubUrl: fileUrl,
+        tag: selectedTag,
       });
 
       // 下書きをクリア
       await storageService.clearDraft();
 
-      // 入力欄をクリア
+      // 入力欄とタグ選択をクリア
       setText('');
+      setSelectedTag(undefined);
 
       Alert.alert(
         '成功',
@@ -179,6 +201,51 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Text variant="bodyMedium" style={styles.warningText}>
                 GitHub設定が必要です。設定タブから設定してください。
               </Text>
+            </View>
+          )}
+
+          {/* タグ選択メニュー */}
+          {tags.length > 0 && (
+            <View style={styles.tagContainer}>
+              <Text variant="bodyMedium" style={styles.tagLabel}>
+                タグ:
+              </Text>
+              <View style={styles.tagButton}>
+                <Menu
+                  visible={menuVisible}
+                  onDismiss={() => setMenuVisible(false)}
+                  anchor={
+                    <TouchableOpacity
+                      onPress={() => setMenuVisible(!menuVisible)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.tagButtonContent}>
+                        <Text variant="bodyMedium" style={styles.tagButtonText}>
+                          {selectedTag || 'タグなし'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  }
+                >
+                  <Menu.Item
+                    onPress={() => {
+                      setSelectedTag(undefined);
+                      setMenuVisible(false);
+                    }}
+                    title="タグなし"
+                  />
+                  {tags.map((tag) => (
+                    <Menu.Item
+                      key={tag.id}
+                      onPress={() => {
+                        setSelectedTag(tag.name);
+                        setMenuVisible(false);
+                      }}
+                      title={tag.name}
+                    />
+                  ))}
+                </Menu>
+              </View>
             </View>
           )}
 
@@ -252,5 +319,32 @@ const styles = StyleSheet.create({
   },
   buttonContent: {
     paddingVertical: 8,
+  },
+  tagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  tagLabel: {
+    marginRight: 8,
+    fontWeight: '600',
+  },
+  tagButton: {
+    flex: 1,
+  },
+  tagButtonContent: {
+    borderWidth: 1,
+    borderColor: '#6200ee',
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagButtonText: {
+    color: '#6200ee',
+    fontWeight: '500',
   },
 });
