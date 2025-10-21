@@ -22,13 +22,15 @@ Fragmentaは、テキスト入力をGitHub上のプライベートリポジト�
 
 ### 📝 ホーム画面
 - テキスト入力 (複数行対応)
-- GitHubへの自動送信
+- **タグ選択機能** (プルダウンメニュー)
+- GitHubへの自動送信 (Frontmatter付き)
 - 下書き自動保存機能
 - エラーハンドリング&自動リトライ
 - ローディング表示
 
 ### 📚 履歴画面
 - 送信履歴の一覧表示
+- **タグ表示** (Chipコンポーネント)
 - GitHub上のファイルへのリンク
 - 履歴削除機能
 - Pull to Refresh
@@ -36,6 +38,7 @@ Fragmentaは、テキスト入力をGitHub上のプライベートリポジト�
 ### ⚙️ 設定画面
 - GitHub Personal Access Token設定
 - リポジトリ情報設定
+- **タグ管理機能** (追加/削除/一覧表示)
 - 設定の検証機能
 - セキュアな認証情報管理
 
@@ -126,17 +129,35 @@ npm run web
 
 ## 使い方
 
+### タグを管理する
+
+1. 「設定」タブを開く
+2. 「タグ管理」セクションで「追加」ボタンをタップ
+3. タグ名を入力（例: 開発メモ、アイデア、TODO）
+4. 「追加」ボタンで保存
+5. 不要なタグは削除アイコンで削除可能
+
 ### テキストを送信する
 
 1. 「ホーム」タブでテキストを入力
-2. 「GitHubに送信」ボタンをタップ
-3. 自動的に `yyyymmddhhmmss.md` という名前でファイルが作成されます
+2. （オプション）タグプルダウンメニューからタグを選択
+3. 「GitHubに送信」ボタンをタップ
+4. 自動的に `yyyymmddhhmmss.md` という名前でファイルが作成されます
+5. タグを選択した場合は、以下のようなFrontmatterが自動追加されます:
+   ```markdown
+   ---
+   tags: [開発メモ]
+   ---
+
+   本文がここに続く...
+   ```
 
 ### 送信履歴を確認する
 
 1. 「履歴」タブを開く
 2. 過去の送信履歴が一覧表示されます
-3. アイテムをタップするとGitHub上のファイルを開けます
+3. タグが付与されている場合は、タグが表示されます
+4. アイテムをタップするとGitHub上のファイルを開けます
 
 ## プロジェクト構成
 
@@ -148,16 +169,19 @@ fragmenta/
 │   │   ├── ErrorDialog.tsx          # エラーダイアログ
 │   │   └── LoadingOverlay.tsx       # ローディング表示
 │   ├── screens/
-│   │   ├── HomeScreen.tsx           # ホーム画面
-│   │   ├── HistoryScreen.tsx        # 履歴画面
-│   │   └── SettingsScreen.tsx       # 設定画面
+│   │   ├── HomeScreen.tsx           # ホーム画面 (タグ選択含む)
+│   │   ├── HistoryScreen.tsx        # 履歴画面 (タグ表示含む)
+│   │   └── SettingsScreen.tsx       # 設定画面 (タグ管理含む)
 │   ├── services/
 │   │   ├── githubService.ts         # GitHub API連携
-│   │   └── storageService.ts        # ローカルストレージ管理
+│   │   └── storageService.ts        # ローカルストレージ管理 (タグ含む)
 │   ├── types/
-│   │   └── index.ts                 # TypeScript型定義
+│   │   └── index.ts                 # TypeScript型定義 (Tag, HistoryEntry拡張)
 │   └── utils/
-│       └── dateFormatter.ts         # 日時フォーマット
+│       ├── dateFormatter.ts         # 日時フォーマット
+│       └── frontmatterParser.ts     # Frontmatter生成・パース
+├── docs/
+│   └── daily-reports/               # 日報
 ├── app.json                         # Expo設定
 ├── package.json                     # 依存関係
 ├── tsconfig.json                    # TypeScript設定
@@ -180,7 +204,8 @@ fragmenta/
 - **AsyncStorage**:
   - GitHub設定 (トークン以外)
   - 下書きデータ
-  - 送信履歴
+  - 送信履歴 (タグ情報含む)
+  - タグ一覧
   - アプリ設定
 
 ### エラーハンドリング
@@ -224,8 +249,10 @@ xcode-select --install
 ## 今後の拡張案
 
 - [ ] Markdown プレビュー機能
-- [ ] タグ・カテゴリー機能
-- [ ] 検索機能
+- [x] タグ機能 ✅ (2025-10-20実装完了)
+- [ ] タグによる絞り込み・検索機能
+- [ ] タグの並び替え機能（ドラッグ&ドロップ）
+- [ ] 複数タグ対応
 - [ ] 複数リポジトリ対応
 - [ ] ダークモード対応
 - [ ] オフライン時のキュー機能
