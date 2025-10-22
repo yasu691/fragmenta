@@ -23,7 +23,15 @@
       "package": "com.yasu691.fragmenta"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Fragmenta",
+      "shortName": "Fragmenta",
+      "description": "GitHub Issueをフラグメント形式で投稿するアプリ",
+      "themeColor": "#6200ee",
+      "backgroundColor": "#ffffff",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/"
     },
     "extra": {
       "eas": {
