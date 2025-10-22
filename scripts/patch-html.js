@@ -8,37 +8,35 @@ const distIndexPath = path.join(__dirname, '../dist/index.html');
 // index.htmlを読み込む
 let html = fs.readFileSync(distIndexPath, 'utf8');
 
-// manifest.jsonのリンクがまだ存在しない場合は追加
-if (!html.includes('manifest.json')) {
-  // <head>の末尾に追加
+// manifest.jsonのリンクを適切に追加
+// 既に存在するlinkタグの後に配置
+const linkRegex = /<link rel="icon"[^>]*\/>/;
+const match = html.match(linkRegex);
+
+if (match && !html.includes('rel="manifest"')) {
+  // icon link の直後に manifest link を追加
   html = html.replace(
-    '</head>',
-    '  <link rel="manifest" href="/manifest.json" />\n</head>'
+    match[0],
+    match[0] + '\n  <link rel="manifest" href="/manifest.json" />'
   );
+}
 
-  // theme-colorも確認・追加
-  if (!html.includes('theme-color')) {
-    html = html.replace(
-      '</head>',
-      '  <meta name="theme-color" content="#6200ee" />\n</head>'
-    );
-  }
-
-  // service workerの登録スクリプトを追加
+// serviceWorkerの登録スクリプト（重複チェック）
+if (!html.includes('serviceWorker')) {
   html = html.replace(
     '</body>',
     `  <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').catch(err => {
-        console.log('Service Worker registration failed:', err);
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('SW registered:', reg))
+          .catch(err => console.log('SW registration failed:', err));
       });
     }
   </script>
 </body>`
   );
-
-  fs.writeFileSync(distIndexPath, html, 'utf8');
-  console.log('✅ index.html patched with manifest.json link');
-} else {
-  console.log('✅ manifest.json link already present');
 }
+
+fs.writeFileSync(distIndexPath, html, 'utf8');
+console.log('✅ index.html patched successfully');
