@@ -1,0 +1,26 @@
+{
+  "name": "Fragmenta",
+  "short_name": "Fragmenta",
+  "description": "GitHub Issueをフラグメント形式で投稿するアプリ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#6200ee",
+  "background_color": "#ffffff",
+  "categories": ["productivity"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

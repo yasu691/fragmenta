@@ -7,7 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "npx expo export --platform web",
+    "build:web": "npx expo export --platform web && npm run copy:public && npm run patch:html",
+    "copy:public": "cp public/manifest.json dist/ 2>/dev/null; cp public/_redirects dist/ 2>/dev/null; true",
+    "patch:html": "node scripts/patch-html.js",
     "predeploy": "npm run build:web",
     "deploy": "netlify deploy --prod --dir=dist",
     "deploy:dry": "netlify deploy --dir=dist"
