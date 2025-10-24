@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { GitHubConfig, HistoryEntry, DraftData, AppSettings, Tag } from '../types';
+import { CookieStorage } from '../utils/cookieStorage';
 
 // ストレージキー定数
 const KEYS = {
@@ -23,7 +24,11 @@ export class StorageService {
    */
   async saveGitHubToken(token: string): Promise<void> {
     if (isWeb) {
-      await AsyncStorage.setItem(KEYS.GITHUB_TOKEN, token);
+      CookieStorage.setItem(KEYS.GITHUB_TOKEN, token, {
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 365 * 24 * 60 * 60,
+      });
     } else {
       await SecureStore.setItemAsync(KEYS.GITHUB_TOKEN, token);
     }
@@ -34,7 +39,7 @@ export class StorageService {
    */
   async getGitHubToken(): Promise<string | null> {
     if (isWeb) {
-      return await AsyncStorage.getItem(KEYS.GITHUB_TOKEN);
+      return CookieStorage.getItem(KEYS.GITHUB_TOKEN);
     } else {
       return await SecureStore.getItemAsync(KEYS.GITHUB_TOKEN);
     }
@@ -75,7 +80,7 @@ export class StorageService {
    */
   async clearGitHubConfig(): Promise<void> {
     if (isWeb) {
-      await AsyncStorage.removeItem(KEYS.GITHUB_TOKEN);
+      CookieStorage.removeItem(KEYS.GITHUB_TOKEN);
     } else {
       await SecureStore.deleteItemAsync(KEYS.GITHUB_TOKEN);
     }
