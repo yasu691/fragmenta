@@ -1,12 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 import { GitHubConfig, HistoryEntry, DraftData, AppSettings, Tag } from '../types';
-import { CookieStorage } from '../utils/cookieStorage';
 
 // ストレージキー定数
 const KEYS = {
-  GITHUB_TOKEN: 'github_token',
   GITHUB_CONFIG: 'github_config',
   DRAFT: 'draft_content',
   HISTORY: 'submission_history',
@@ -14,36 +10,8 @@ const KEYS = {
   TAGS: 'tags',
 } as const;
 
-const isWeb = Platform.OS === 'web';
-
 export class StorageService {
   // ========== GitHub設定関連 ==========
-
-  /**
-   * GitHub Personal Access Tokenを安全に保存
-   */
-  async saveGitHubToken(token: string): Promise<void> {
-    if (isWeb) {
-      CookieStorage.setItem(KEYS.GITHUB_TOKEN, token, {
-        secure: true,
-        sameSite: 'strict',
-        maxAge: 365 * 24 * 60 * 60,
-      });
-    } else {
-      await SecureStore.setItemAsync(KEYS.GITHUB_TOKEN, token);
-    }
-  }
-
-  /**
-   * GitHub Personal Access Tokenを取得
-   */
-  async getGitHubToken(): Promise<string | null> {
-    if (isWeb) {
-      return CookieStorage.getItem(KEYS.GITHUB_TOKEN);
-    } else {
-      return await SecureStore.getItemAsync(KEYS.GITHUB_TOKEN);
-    }
-  }
 
   /**
    * GitHub設定を保存 (トークン以外)
@@ -53,37 +21,20 @@ export class StorageService {
   }
 
   /**
-   * GitHub設定を取得
+   * GitHub設定を取得 (トークン以外)
    */
-  async getGitHubConfig(): Promise<GitHubConfig | null> {
-    const token = await this.getGitHubToken();
+  async getGitHubConfig(): Promise<Omit<GitHubConfig, 'token'> | null> {
     const configJson = await AsyncStorage.getItem(KEYS.GITHUB_CONFIG);
-
-    if (!token || !configJson) {
+    if (!configJson) {
       return null;
     }
-
-    const config = JSON.parse(configJson);
-    return { ...config, token };
-  }
-
-  /**
-   * GitHub設定が存在するかチェック
-   */
-  async hasGitHubConfig(): Promise<boolean> {
-    const config = await this.getGitHubConfig();
-    return config !== null;
+    return JSON.parse(configJson);
   }
 
   /**
    * GitHub設定をクリア
    */
   async clearGitHubConfig(): Promise<void> {
-    if (isWeb) {
-      CookieStorage.removeItem(KEYS.GITHUB_TOKEN);
-    } else {
-      await SecureStore.deleteItemAsync(KEYS.GITHUB_TOKEN);
-    }
     await AsyncStorage.removeItem(KEYS.GITHUB_CONFIG);
   }
 
