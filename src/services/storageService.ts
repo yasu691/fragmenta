@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { GitHubConfig, HistoryEntry, DraftData, AppSettings, Tag } from '../types';
 
 // ストレージキー定数
@@ -12,6 +13,8 @@ const KEYS = {
   TAGS: 'tags',
 } as const;
 
+const isWeb = Platform.OS === 'web';
+
 export class StorageService {
   // ========== GitHub設定関連 ==========
 
@@ -19,14 +22,22 @@ export class StorageService {
    * GitHub Personal Access Tokenを安全に保存
    */
   async saveGitHubToken(token: string): Promise<void> {
-    await SecureStore.setItemAsync(KEYS.GITHUB_TOKEN, token);
+    if (isWeb) {
+      await AsyncStorage.setItem(KEYS.GITHUB_TOKEN, token);
+    } else {
+      await SecureStore.setItemAsync(KEYS.GITHUB_TOKEN, token);
+    }
   }
 
   /**
    * GitHub Personal Access Tokenを取得
    */
   async getGitHubToken(): Promise<string | null> {
-    return await SecureStore.getItemAsync(KEYS.GITHUB_TOKEN);
+    if (isWeb) {
+      return await AsyncStorage.getItem(KEYS.GITHUB_TOKEN);
+    } else {
+      return await SecureStore.getItemAsync(KEYS.GITHUB_TOKEN);
+    }
   }
 
   /**
@@ -63,7 +74,11 @@ export class StorageService {
    * GitHub設定をクリア
    */
   async clearGitHubConfig(): Promise<void> {
-    await SecureStore.deleteItemAsync(KEYS.GITHUB_TOKEN);
+    if (isWeb) {
+      await AsyncStorage.removeItem(KEYS.GITHUB_TOKEN);
+    } else {
+      await SecureStore.deleteItemAsync(KEYS.GITHUB_TOKEN);
+    }
     await AsyncStorage.removeItem(KEYS.GITHUB_CONFIG);
   }
 
