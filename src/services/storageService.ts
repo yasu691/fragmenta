@@ -1,10 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { GitHubConfig, HistoryEntry, DraftData, AppSettings, Tag } from '../types';
 
 // ストレージキー定数
 const KEYS = {
-  GITHUB_TOKEN: 'github_token',
   GITHUB_CONFIG: 'github_config',
   DRAFT: 'draft_content',
   HISTORY: 'submission_history',
@@ -16,20 +14,6 @@ export class StorageService {
   // ========== GitHub設定関連 ==========
 
   /**
-   * GitHub Personal Access Tokenを安全に保存
-   */
-  async saveGitHubToken(token: string): Promise<void> {
-    await SecureStore.setItemAsync(KEYS.GITHUB_TOKEN, token);
-  }
-
-  /**
-   * GitHub Personal Access Tokenを取得
-   */
-  async getGitHubToken(): Promise<string | null> {
-    return await SecureStore.getItemAsync(KEYS.GITHUB_TOKEN);
-  }
-
-  /**
    * GitHub設定を保存 (トークン以外)
    */
   async saveGitHubConfig(config: Omit<GitHubConfig, 'token'>): Promise<void> {
@@ -37,33 +21,20 @@ export class StorageService {
   }
 
   /**
-   * GitHub設定を取得
+   * GitHub設定を取得 (トークン以外)
    */
-  async getGitHubConfig(): Promise<GitHubConfig | null> {
-    const token = await this.getGitHubToken();
+  async getGitHubConfig(): Promise<Omit<GitHubConfig, 'token'> | null> {
     const configJson = await AsyncStorage.getItem(KEYS.GITHUB_CONFIG);
-
-    if (!token || !configJson) {
+    if (!configJson) {
       return null;
     }
-
-    const config = JSON.parse(configJson);
-    return { ...config, token };
-  }
-
-  /**
-   * GitHub設定が存在するかチェック
-   */
-  async hasGitHubConfig(): Promise<boolean> {
-    const config = await this.getGitHubConfig();
-    return config !== null;
+    return JSON.parse(configJson);
   }
 
   /**
    * GitHub設定をクリア
    */
   async clearGitHubConfig(): Promise<void> {
-    await SecureStore.deleteItemAsync(KEYS.GITHUB_TOKEN);
     await AsyncStorage.removeItem(KEYS.GITHUB_CONFIG);
   }
 

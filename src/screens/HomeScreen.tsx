@@ -9,42 +9,35 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ErrorDialog } from '../components/ErrorDialog';
 import { AppError, Tag } from '../types';
 import { addFrontmatter } from '../utils/frontmatterParser';
+import { useGitHubConfig } from '../contexts/GitHubConfigContext';
 
 interface HomeScreenProps {
   navigation: any;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const { config } = useGitHubConfig();
+  
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
-  const [isConfigured, setIsConfigured] = useState(false);
 
-  // タグ関連の状態
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined);
   const [menuVisible, setMenuVisible] = useState(false);
 
-  // 画面がフォーカスされたときに設定をチェック
   useFocusEffect(
     useCallback(() => {
       checkConfiguration();
       loadDraft();
       loadTags();
-    }, [])
+    }, [config])
   );
 
-  // 設定の存在確認とGitHubServiceの初期化
   const checkConfiguration = async () => {
     try {
-      const hasConfig = await storageService.hasGitHubConfig();
-      setIsConfigured(hasConfig);
-
-      if (hasConfig) {
-        const config = await storageService.getGitHubConfig();
-        if (config) {
-          githubService.initialize(config);
-        }
+      if (config) {
+        githubService.initialize(config);
       }
     } catch (error) {
       console.error('Failed to check configuration:', error);
@@ -112,7 +105,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
-    if (!isConfigured) {
+    if (!config) {
       Alert.alert(
         '設定が必要です',
         'GitHub設定を行ってください',
@@ -196,7 +189,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         style={styles.container}
       >
         <View style={styles.content}>
-          {!isConfigured && (
+          {!config && (
             <View style={styles.warningBanner}>
               <Text variant="bodyMedium" style={styles.warningText}>
                 GitHub設定が必要です。設定タブから設定してください。
@@ -265,7 +258,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             onPress={handleSubmit}
             style={styles.button}
             contentStyle={styles.buttonContent}
-            disabled={loading || !isConfigured}
+            disabled={loading || !config}
           >
             GitHubに送信
           </Button>

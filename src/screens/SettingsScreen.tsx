@@ -6,8 +6,11 @@ import { storageService } from '../services/storageService';
 import { githubService } from '../services/githubService';
 import { GitHubConfig, Tag } from '../types';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { useGitHubConfig } from '../contexts/GitHubConfigContext';
 
 export const SettingsScreen: React.FC = () => {
+  const { config: savedConfig, setConfig, clearConfig } = useGitHubConfig();
+  
   const [token, setToken] = useState('');
   const [owner, setOwner] = useState('');
   const [repo, setRepo] = useState('');
@@ -34,11 +37,13 @@ export const SettingsScreen: React.FC = () => {
       setIsInitializing(true);
       const config = await storageService.getGitHubConfig();
       if (config) {
-        setToken(config.token);
         setOwner(config.owner);
         setRepo(config.repo);
         setFolderPath(config.folderPath);
         setBranch(config.branch);
+      }
+      if (savedConfig) {
+        setToken(savedConfig.token);
       }
     } catch (error) {
       Alert.alert('エラー', '設定の読み込みに失敗しました');
@@ -57,7 +62,6 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleSave = async () => {
-    // バリデーション
     if (!token || !owner || !repo || !branch) {
       Alert.alert('エラー', 'すべての必須項目を入力してください');
       return;
@@ -74,7 +78,6 @@ export const SettingsScreen: React.FC = () => {
         branch,
       };
 
-      // 設定の検証
       const isValid = await githubService.validateConfig(config);
       if (!isValid) {
         Alert.alert(
@@ -85,8 +88,6 @@ export const SettingsScreen: React.FC = () => {
         return;
       }
 
-      // 設定を保存
-      await storageService.saveGitHubToken(token);
       await storageService.saveGitHubConfig({
         owner,
         repo,
@@ -94,10 +95,11 @@ export const SettingsScreen: React.FC = () => {
         branch,
       });
 
-      // GitHubServiceを初期化
+      setConfig(config);
+
       githubService.initialize(config);
 
-      Alert.alert('成功', '設定を保存しました');
+      Alert.alert('成功', '設定を保存しました（トークンはメモリに保存されます。ページをリロードすると再入力が必要です）');
     } catch (error: any) {
       Alert.alert('エラー', error.message || '設定の保存に失敗しました');
     } finally {
@@ -116,6 +118,7 @@ export const SettingsScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await storageService.clearGitHubConfig();
+            clearConfig();
             setToken('');
             setOwner('');
             setRepo('');
