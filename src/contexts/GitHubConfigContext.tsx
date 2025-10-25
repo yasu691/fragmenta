@@ -26,9 +26,14 @@ export const GitHubConfigProvider: React.FC<GitHubConfigProviderProps> = ({ chil
 
   const loadConfig = async () => {
     try {
+      // ネイティブ版の場合、SecureStoreからトークンを読み込む
+      if (TokenStore.loadFromSecureStore) {
+        await TokenStore.loadFromSecureStore();
+      }
+
       const savedConfig = await storageService.getGitHubConfig();
       const tokenData = TokenStore.get();
-      
+
       if (savedConfig && tokenData) {
         setConfigState({
           ...savedConfig,
