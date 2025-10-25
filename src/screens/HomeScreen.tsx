@@ -156,10 +156,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // 下書きをクリア
       await storageService.clearDraft();
 
-      // 入力欄とタグ選択をクリア
+      // 入力欄をクリア（タグ選択は維持）
       setText('');
-      setSelectedPrimaryTag(undefined);
-      setSelectedSecondaryTag(undefined);
 
       Alert.alert(
         '成功',
