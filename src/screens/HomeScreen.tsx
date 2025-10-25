@@ -22,9 +22,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
 
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined);
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [primaryTags, setPrimaryTags] = useState<Tag[]>([]);
+  const [secondaryTags, setSecondaryTags] = useState<Tag[]>([]);
+  const [selectedPrimaryTag, setSelectedPrimaryTag] = useState<string | undefined>(undefined);
+  const [selectedSecondaryTag, setSelectedSecondaryTag] = useState<string | undefined>(undefined);
+  const [primaryMenuVisible, setPrimaryMenuVisible] = useState(false);
+  const [secondaryMenuVisible, setSecondaryMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,8 +62,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // タグを読み込む
   const loadTags = async () => {
     try {
-      const loadedTags = await storageService.getTags();
-      setTags(loadedTags.sort((a, b) => a.order - b.order));
+      const loadedPrimaryTags = await storageService.getTags('primary');
+      const loadedSecondaryTags = await storageService.getTags('secondary');
+      setPrimaryTags(loadedPrimaryTags.sort((a, b) => a.order - b.order));
+      setSecondaryTags(loadedSecondaryTags.sort((a, b) => a.order - b.order));
     } catch (error) {
       console.error('Failed to load tags:', error);
     }
@@ -130,7 +135,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     try {
       // Frontmatter を追加したコンテンツを作成
-      const contentWithFrontmatter = addFrontmatter(text, selectedTag);
+      const tags = {
+        primary: selectedPrimaryTag,
+        secondary: selectedSecondaryTag,
+      };
+      const contentWithFrontmatter = addFrontmatter(text, tags);
 
       // GitHubにMarkdownファイルを作成
       const fileUrl = await submitWithRetry(contentWithFrontmatter);
@@ -141,7 +150,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         content: text,
         createdAt: new Date(),
         githubUrl: fileUrl,
-        tag: selectedTag,
+        tags,
       });
 
       // 下書きをクリア
@@ -149,7 +158,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       // 入力欄とタグ選択をクリア
       setText('');
-      setSelectedTag(undefined);
+      setSelectedPrimaryTag(undefined);
+      setSelectedSecondaryTag(undefined);
 
       Alert.alert(
         '成功',
@@ -197,24 +207,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
           )}
 
-          {/* タグ選択メニュー */}
-          {tags.length > 0 && (
+          {/* タグ1選択メニュー */}
+          {primaryTags.length > 0 && (
             <View style={styles.tagContainer}>
               <Text variant="bodyMedium" style={styles.tagLabel}>
-                タグ:
+                タグ1:
               </Text>
               <View style={styles.tagButton}>
                 <Menu
-                  visible={menuVisible}
-                  onDismiss={() => setMenuVisible(false)}
+                  visible={primaryMenuVisible}
+                  onDismiss={() => setPrimaryMenuVisible(false)}
                   anchor={
                     <TouchableOpacity
-                      onPress={() => setMenuVisible(!menuVisible)}
+                      onPress={() => setPrimaryMenuVisible(!primaryMenuVisible)}
                       activeOpacity={0.7}
                     >
                       <View style={styles.tagButtonContent}>
                         <Text variant="bodyMedium" style={styles.tagButtonText}>
-                          {selectedTag || 'タグなし'}
+                          {selectedPrimaryTag || 'タグなし'}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -222,17 +232,62 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 >
                   <Menu.Item
                     onPress={() => {
-                      setSelectedTag(undefined);
-                      setMenuVisible(false);
+                      setSelectedPrimaryTag(undefined);
+                      setPrimaryMenuVisible(false);
                     }}
                     title="タグなし"
                   />
-                  {tags.map((tag) => (
+                  {primaryTags.map((tag) => (
                     <Menu.Item
                       key={tag.id}
                       onPress={() => {
-                        setSelectedTag(tag.name);
-                        setMenuVisible(false);
+                        setSelectedPrimaryTag(tag.name);
+                        setPrimaryMenuVisible(false);
+                      }}
+                      title={tag.name}
+                    />
+                  ))}
+                </Menu>
+              </View>
+            </View>
+          )}
+
+          {/* タグ2選択メニュー */}
+          {secondaryTags.length > 0 && (
+            <View style={styles.tagContainer}>
+              <Text variant="bodyMedium" style={styles.tagLabel}>
+                タグ2:
+              </Text>
+              <View style={styles.tagButton}>
+                <Menu
+                  visible={secondaryMenuVisible}
+                  onDismiss={() => setSecondaryMenuVisible(false)}
+                  anchor={
+                    <TouchableOpacity
+                      onPress={() => setSecondaryMenuVisible(!secondaryMenuVisible)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.tagButtonContent}>
+                        <Text variant="bodyMedium" style={styles.tagButtonText}>
+                          {selectedSecondaryTag || 'タグなし'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  }
+                >
+                  <Menu.Item
+                    onPress={() => {
+                      setSelectedSecondaryTag(undefined);
+                      setSecondaryMenuVisible(false);
+                    }}
+                    title="タグなし"
+                  />
+                  {secondaryTags.map((tag) => (
+                    <Menu.Item
+                      key={tag.id}
+                      onPress={() => {
+                        setSelectedSecondaryTag(tag.name);
+                        setSecondaryMenuVisible(false);
                       }}
                       title={tag.name}
                     />

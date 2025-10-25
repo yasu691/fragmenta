@@ -14,7 +14,11 @@ export interface HistoryEntry {
   content: string;
   createdAt: Date;
   githubUrl?: string;
-  tag?: string; // タグ名（オプショナル）
+  tag?: string; // 旧タグ名（下位互換性のため残す）
+  tags?: {
+    primary?: string; // カテゴリタグ
+    secondary?: string; // 優先度タグなど
+  };
 }
 
 // 下書き保存データ
@@ -50,4 +54,5 @@ export interface Tag {
   id: string;
   name: string;
   order: number; // 表示順序
+  type: 'primary' | 'secondary'; // タグの種類（カテゴリ or 優先度など）
 }

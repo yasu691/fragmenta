@@ -156,13 +156,21 @@ export class StorageService {
 
   /**
    * タグ一覧を取得
+   * @param type タグタイプでフィルタ（オプション）
    */
-  async getTags(): Promise<Tag[]> {
+  async getTags(type?: 'primary' | 'secondary'): Promise<Tag[]> {
     const tagsJson = await AsyncStorage.getItem(KEYS.TAGS);
     if (!tagsJson) {
       return [];
     }
-    return JSON.parse(tagsJson);
+    const allTags: Tag[] = JSON.parse(tagsJson);
+
+    // タイプ指定がある場合はフィルタリング
+    if (type) {
+      return allTags.filter(tag => tag.type === type);
+    }
+
+    return allTags;
   }
 
   /**
@@ -174,23 +182,27 @@ export class StorageService {
 
   /**
    * タグを追加
+   * @param name タグ名
+   * @param type タグタイプ（primary or secondary）
    */
-  async addTag(name: string): Promise<Tag> {
-    const tags = await this.getTags();
+  async addTag(name: string, type: 'primary' | 'secondary'): Promise<Tag> {
+    const allTags = await this.getTags();
+    const tagsOfType = allTags.filter(tag => tag.type === type);
 
-    // 重複チェック
-    if (tags.some(tag => tag.name === name)) {
+    // 同じタイプ内で重複チェック
+    if (tagsOfType.some(tag => tag.name === name)) {
       throw new Error('同じ名前のタグが既に存在します');
     }
 
     const newTag: Tag = {
       id: Date.now().toString(),
       name,
-      order: tags.length, // 最後尾に追加
+      order: tagsOfType.length, // 同じタイプ内での順序
+      type,
     };
 
-    tags.push(newTag);
-    await this.saveTags(tags);
+    allTags.push(newTag);
+    await this.saveTags(allTags);
     return newTag;
   }
 
@@ -198,14 +210,19 @@ export class StorageService {
    * タグを削除
    */
   async deleteTag(id: string): Promise<void> {
-    const tags = await this.getTags();
-    const filteredTags = tags.filter(tag => tag.id !== id);
+    const allTags = await this.getTags();
+    const deletedTag = allTags.find(tag => tag.id === id);
+    if (!deletedTag) return;
 
-    // order を振り直し
-    const reorderedTags = filteredTags.map((tag, index) => ({
-      ...tag,
-      order: index,
-    }));
+    const filteredTags = allTags.filter(tag => tag.id !== id);
+
+    // 削除したタグと同じタイプのタグだけorder を振り直し
+    const reorderedTags = filteredTags.map(tag => {
+      if (tag.type === deletedTag.type && tag.order > deletedTag.order) {
+        return { ...tag, order: tag.order - 1 };
+      }
+      return tag;
+    });
 
     await this.saveTags(reorderedTags);
   }

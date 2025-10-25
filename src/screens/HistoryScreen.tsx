@@ -117,11 +117,24 @@ export const HistoryScreen: React.FC = () => {
             onPress={() => handleDelete(item.id)}
           />
         </View>
-        {item.tag && (
+        {(item.tags?.primary || item.tags?.secondary || item.tag) && (
           <View style={styles.tagContainer}>
-            <Chip icon="tag" style={styles.tagChip}>
-              {item.tag}
-            </Chip>
+            {item.tags?.primary && (
+              <Chip icon="tag" style={styles.primaryTagChip}>
+                {item.tags.primary}
+              </Chip>
+            )}
+            {item.tags?.secondary && (
+              <Chip icon="flag" style={styles.secondaryTagChip}>
+                {item.tags.secondary}
+              </Chip>
+            )}
+            {/* 下位互換性: 旧タグフィールドの表示 */}
+            {!item.tags && item.tag && (
+              <Chip icon="tag" style={styles.tagChip}>
+                {item.tag}
+              </Chip>
+            )}
           </View>
         )}
         <Text
@@ -234,8 +247,19 @@ const styles = StyleSheet.create({
   },
   tagContainer: {
     marginBottom: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   tagChip: {
     alignSelf: 'flex-start',
+  },
+  primaryTagChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#e3f2fd',
+  },
+  secondaryTagChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff3e0',
   },
 });

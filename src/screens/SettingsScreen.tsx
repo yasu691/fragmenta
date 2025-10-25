@@ -20,9 +20,12 @@ export const SettingsScreen: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
 
   // タグ管理用の状態
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newTagName, setNewTagName] = useState('');
+  const [primaryTags, setPrimaryTags] = useState<Tag[]>([]);
+  const [secondaryTags, setSecondaryTags] = useState<Tag[]>([]);
+  const [showPrimaryAddDialog, setShowPrimaryAddDialog] = useState(false);
+  const [showSecondaryAddDialog, setShowSecondaryAddDialog] = useState(false);
+  const [newPrimaryTagName, setNewPrimaryTagName] = useState('');
+  const [newSecondaryTagName, setNewSecondaryTagName] = useState('');
 
   // スクロール制御用
   const scrollViewRef = useRef<ScrollView>(null);
@@ -54,8 +57,10 @@ export const SettingsScreen: React.FC = () => {
 
   const loadTags = async () => {
     try {
-      const loadedTags = await storageService.getTags();
-      setTags(loadedTags.sort((a, b) => a.order - b.order));
+      const loadedPrimaryTags = await storageService.getTags('primary');
+      const loadedSecondaryTags = await storageService.getTags('secondary');
+      setPrimaryTags(loadedPrimaryTags.sort((a, b) => a.order - b.order));
+      setSecondaryTags(loadedSecondaryTags.sort((a, b) => a.order - b.order));
     } catch (error) {
       Alert.alert('エラー', 'タグの読み込みに失敗しました');
     }
@@ -131,19 +136,37 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
-  // タグ追加
-  const handleAddTag = async () => {
-    if (!newTagName.trim()) {
+  // タグ1追加
+  const handleAddPrimaryTag = async () => {
+    if (!newPrimaryTagName.trim()) {
       Alert.alert('エラー', 'タグ名を入力してください');
       return;
     }
 
     try {
-      await storageService.addTag(newTagName.trim());
+      await storageService.addTag(newPrimaryTagName.trim(), 'primary');
       await loadTags();
-      setNewTagName('');
-      setShowAddDialog(false);
-      Alert.alert('成功', 'タグを追加しました');
+      setNewPrimaryTagName('');
+      setShowPrimaryAddDialog(false);
+      Alert.alert('成功', 'タグ1を追加しました');
+    } catch (error: any) {
+      Alert.alert('エラー', error.message || 'タグの追加に失敗しました');
+    }
+  };
+
+  // タグ2追加
+  const handleAddSecondaryTag = async () => {
+    if (!newSecondaryTagName.trim()) {
+      Alert.alert('エラー', 'タグ名を入力してください');
+      return;
+    }
+
+    try {
+      await storageService.addTag(newSecondaryTagName.trim(), 'secondary');
+      await loadTags();
+      setNewSecondaryTagName('');
+      setShowSecondaryAddDialog(false);
+      Alert.alert('成功', 'タグ2を追加しました');
     } catch (error: any) {
       Alert.alert('エラー', error.message || 'タグの追加に失敗しました');
     }
@@ -272,39 +295,39 @@ export const SettingsScreen: React.FC = () => {
 
         <Divider style={styles.divider} />
 
-        {/* タグ管理セクション */}
+        {/* タグ1管理セクション */}
         <View style={styles.section}>
           <View style={styles.tagHeader}>
             <View>
               <Text variant="titleLarge" style={styles.title}>
-                タグ管理
+                タグ1管理
               </Text>
               <Text variant="bodyMedium" style={styles.description}>
-                投稿時に選択できるタグを管理します。
+                投稿時に選択できるタグ1を管理します。
               </Text>
             </View>
             <Button
               mode="contained"
-              onPress={() => setShowAddDialog(true)}
+              onPress={() => setShowPrimaryAddDialog(true)}
               icon="plus"
             >
               追加
             </Button>
           </View>
 
-          {/* タグ追加カード */}
-          {showAddDialog && (
+          {/* タグ1追加カード */}
+          {showPrimaryAddDialog && (
             <Card style={styles.addTagCard}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.addTagTitle}>
-                  新しいタグを追加
+                  新しいタグ1を追加
                 </Text>
                 <TextInput
                   label="タグ名"
-                  value={newTagName}
-                  onChangeText={setNewTagName}
+                  value={newPrimaryTagName}
+                  onChangeText={setNewPrimaryTagName}
                   mode="outlined"
-                  placeholder="例: 開発メモ"
+                  placeholder="例: 仕事、個人、趣味"
                   style={styles.addTagInput}
                   onFocus={() => {
                     // キーボード表示時にスクロール
@@ -316,8 +339,8 @@ export const SettingsScreen: React.FC = () => {
                 <View style={styles.addTagActions}>
                   <Button
                     onPress={() => {
-                      setShowAddDialog(false);
-                      setNewTagName('');
+                      setShowPrimaryAddDialog(false);
+                      setNewPrimaryTagName('');
                     }}
                     style={styles.addTagButton}
                   >
@@ -325,7 +348,7 @@ export const SettingsScreen: React.FC = () => {
                   </Button>
                   <Button
                     mode="contained"
-                    onPress={handleAddTag}
+                    onPress={handleAddPrimaryTag}
                     style={styles.addTagButton}
                   >
                     追加
@@ -335,11 +358,98 @@ export const SettingsScreen: React.FC = () => {
             </Card>
           )}
 
-          {tags.length === 0 ? (
-            <Text style={styles.emptyText}>タグが登録されていません</Text>
+          {primaryTags.length === 0 ? (
+            <Text style={styles.emptyText}>タグ1が登録されていません</Text>
           ) : (
             <FlatList
-              data={tags}
+              data={primaryTags}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <Card style={styles.tagCard}>
+                  <Card.Content style={styles.tagCardContent}>
+                    <Text variant="bodyLarge">{item.name}</Text>
+                    <IconButton
+                      icon="delete"
+                      size={20}
+                      onPress={() => handleDeleteTag(item.id)}
+                    />
+                  </Card.Content>
+                </Card>
+              )}
+            />
+          )}
+        </View>
+
+        <Divider style={styles.divider} />
+
+        {/* タグ2管理セクション */}
+        <View style={styles.section}>
+          <View style={styles.tagHeader}>
+            <View>
+              <Text variant="titleLarge" style={styles.title}>
+                タグ2管理
+              </Text>
+              <Text variant="bodyMedium" style={styles.description}>
+                投稿時に選択できるタグ2を管理します。
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              onPress={() => setShowSecondaryAddDialog(true)}
+              icon="plus"
+            >
+              追加
+            </Button>
+          </View>
+
+          {/* タグ2追加カード */}
+          {showSecondaryAddDialog && (
+            <Card style={styles.addTagCard}>
+              <Card.Content>
+                <Text variant="titleMedium" style={styles.addTagTitle}>
+                  新しいタグ2を追加
+                </Text>
+                <TextInput
+                  label="タグ名"
+                  value={newSecondaryTagName}
+                  onChangeText={setNewSecondaryTagName}
+                  mode="outlined"
+                  placeholder="例: 緊急、重要、低"
+                  style={styles.addTagInput}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 300);
+                  }}
+                />
+                <View style={styles.addTagActions}>
+                  <Button
+                    onPress={() => {
+                      setShowSecondaryAddDialog(false);
+                      setNewSecondaryTagName('');
+                    }}
+                    style={styles.addTagButton}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={handleAddSecondaryTag}
+                    style={styles.addTagButton}
+                  >
+                    追加
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          )}
+
+          {secondaryTags.length === 0 ? (
+            <Text style={styles.emptyText}>タグ2が登録されていません</Text>
+          ) : (
+            <FlatList
+              data={secondaryTags}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               renderItem={({ item }) => (
