@@ -190,6 +190,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     handleSubmit();
   };
 
+  // Ctrl+Enter または Cmd+Enter で送信
+  const handleKeyPress = (e: any) => {
+    if (e.nativeEvent.key === 'Enter' && (e.nativeEvent.ctrlKey || e.nativeEvent.metaKey)) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -299,6 +307,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             label="メッセージを入力"
             value={text}
             onChangeText={setText}
+            onKeyPress={handleKeyPress}
             mode="outlined"
             multiline
             numberOfLines={8}
