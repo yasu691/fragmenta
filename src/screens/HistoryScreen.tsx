@@ -1,15 +1,37 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, FlatList, View, Alert, Linking } from 'react-native';
+import { StyleSheet, FlatList, View, Linking } from 'react-native';
 import { Text, Card, IconButton, FAB, Chip } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { storageService } from '../services/storageService';
 import { HistoryEntry } from '../types';
 import { formatDateToDisplay } from '../utils/dateFormatter';
+import { InfoDialog } from '../components/InfoDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export const HistoryScreen: React.FC = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ダイアログ用の状態
+  const [infoDialog, setInfoDialog] = useState<{ visible: boolean; title: string; message: string }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    destructive?: boolean;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -23,7 +45,7 @@ export const HistoryScreen: React.FC = () => {
       setHistory(entries);
     } catch (error) {
       console.error('Failed to load history:', error);
-      Alert.alert('エラー', '履歴の読み込みに失敗しました');
+      setInfoDialog({ visible: true, title: 'エラー', message: '履歴の読み込みに失敗しました' });
     }
   };
 
@@ -34,30 +56,26 @@ export const HistoryScreen: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert(
-      '確認',
-      'この履歴を削除しますか?',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '削除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await storageService.deleteHistoryEntry(id);
-              await loadHistory();
-            } catch (error) {
-              Alert.alert('エラー', '削除に失敗しました');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmDialog({
+      visible: true,
+      title: '確認',
+      message: 'この履歴を削除しますか?',
+      confirmText: '削除',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await storageService.deleteHistoryEntry(id);
+          await loadHistory();
+        } catch (error) {
+          setInfoDialog({ visible: true, title: 'エラー', message: '削除に失敗しました' });
+        }
+      },
+    });
   };
 
   const handleOpenUrl = async (url?: string) => {
     if (!url) {
-      Alert.alert('エラー', 'URLが見つかりません');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'URLが見つかりません' });
       return;
     }
 
@@ -66,33 +84,29 @@ export const HistoryScreen: React.FC = () => {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('エラー', 'URLを開けません');
+        setInfoDialog({ visible: true, title: 'エラー', message: 'URLを開けません' });
       }
     } catch (error) {
-      Alert.alert('エラー', 'URLを開けませんでした');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'URLを開けませんでした' });
     }
   };
 
   const handleClearAll = () => {
-    Alert.alert(
-      '確認',
-      'すべての履歴を削除しますか?',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: 'すべて削除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await storageService.clearHistory();
-              await loadHistory();
-            } catch (error) {
-              Alert.alert('エラー', '削除に失敗しました');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmDialog({
+      visible: true,
+      title: '確認',
+      message: 'すべての履歴を削除しますか?',
+      confirmText: 'すべて削除',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await storageService.clearHistory();
+          await loadHistory();
+        } catch (error) {
+          setInfoDialog({ visible: true, title: 'エラー', message: '削除に失敗しました' });
+        }
+      },
+    });
   };
 
   const renderItem = ({ item }: { item: HistoryEntry }) => (
@@ -183,6 +197,23 @@ export const HistoryScreen: React.FC = () => {
           />
         )}
       </View>
+
+      <InfoDialog
+        visible={infoDialog.visible}
+        title={infoDialog.title}
+        message={infoDialog.message}
+        onDismiss={() => setInfoDialog({ ...infoDialog, visible: false })}
+      />
+
+      <ConfirmDialog
+        visible={confirmDialog.visible}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        confirmDestructive={confirmDialog.destructive}
+        onConfirm={confirmDialog.onConfirm}
+        onDismiss={() => setConfirmDialog({ ...confirmDialog, visible: false })}
+      />
     </SafeAreaView>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, ScrollView, View, Alert, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, ScrollView, View, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Text, Divider, Card, IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { storageService } from '../services/storageService';
@@ -7,6 +7,8 @@ import { githubService } from '../services/githubService';
 import { GitHubConfig, Tag } from '../types';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useGitHubConfig } from '../contexts/GitHubConfigContext';
+import { InfoDialog } from '../components/InfoDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export const SettingsScreen: React.FC = () => {
   const { config: savedConfig, setConfig, clearConfig } = useGitHubConfig();
@@ -26,6 +28,26 @@ export const SettingsScreen: React.FC = () => {
   const [showSecondaryAddDialog, setShowSecondaryAddDialog] = useState(false);
   const [newPrimaryTagName, setNewPrimaryTagName] = useState('');
   const [newSecondaryTagName, setNewSecondaryTagName] = useState('');
+
+  // ダイアログ用の状態
+  const [infoDialog, setInfoDialog] = useState<{ visible: boolean; title: string; message: string }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    destructive?: boolean;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // スクロール制御用
   const scrollViewRef = useRef<ScrollView>(null);
@@ -49,7 +71,7 @@ export const SettingsScreen: React.FC = () => {
         setToken(savedConfig.token);
       }
     } catch (error) {
-      Alert.alert('エラー', '設定の読み込みに失敗しました');
+      setInfoDialog({ visible: true, title: 'エラー', message: '設定の読み込みに失敗しました' });
     } finally {
       setIsInitializing(false);
     }
@@ -62,13 +84,13 @@ export const SettingsScreen: React.FC = () => {
       setPrimaryTags(loadedPrimaryTags.sort((a, b) => a.order - b.order));
       setSecondaryTags(loadedSecondaryTags.sort((a, b) => a.order - b.order));
     } catch (error) {
-      Alert.alert('エラー', 'タグの読み込みに失敗しました');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'タグの読み込みに失敗しました' });
     }
   };
 
   const handleSave = async () => {
     if (!token || !owner || !repo || !branch) {
-      Alert.alert('エラー', 'すべての必須項目を入力してください');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'すべての必須項目を入力してください' });
       return;
     }
 
@@ -85,10 +107,11 @@ export const SettingsScreen: React.FC = () => {
 
       const isValid = await githubService.validateConfig(config);
       if (!isValid) {
-        Alert.alert(
-          'エラー',
-          '設定が無効です。トークンやリポジトリ情報を確認してください。'
-        );
+        setInfoDialog({
+          visible: true,
+          title: 'エラー',
+          message: '設定が無効です。トークンやリポジトリ情報を確認してください。',
+        });
         setLoading(false);
         return;
       }
@@ -104,42 +127,42 @@ export const SettingsScreen: React.FC = () => {
 
       githubService.initialize(config);
 
-      Alert.alert('成功', '設定を保存しました（トークンはメモリに保存されます。ページをリロードすると再入力が必要です）');
+      setInfoDialog({
+        visible: true,
+        title: '成功',
+        message: '設定を保存しました（トークンはメモリに保存されます。ページをリロードすると再入力が必要です）',
+      });
     } catch (error: any) {
-      Alert.alert('エラー', error.message || '設定の保存に失敗しました');
+      setInfoDialog({ visible: true, title: 'エラー', message: error.message || '設定の保存に失敗しました' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleClear = async () => {
-    Alert.alert(
-      '確認',
-      '設定をクリアしますか?',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: 'クリア',
-          style: 'destructive',
-          onPress: async () => {
-            await storageService.clearGitHubConfig();
-            clearConfig();
-            setToken('');
-            setOwner('');
-            setRepo('');
-            setFolderPath('');
-            setBranch('main');
-            Alert.alert('完了', '設定をクリアしました');
-          },
-        },
-      ]
-    );
+    setConfirmDialog({
+      visible: true,
+      title: '確認',
+      message: '設定をクリアしますか?',
+      confirmText: 'クリア',
+      destructive: true,
+      onConfirm: async () => {
+        await storageService.clearGitHubConfig();
+        clearConfig();
+        setToken('');
+        setOwner('');
+        setRepo('');
+        setFolderPath('');
+        setBranch('main');
+        setInfoDialog({ visible: true, title: '完了', message: '設定をクリアしました' });
+      },
+    });
   };
 
   // タグ1追加
   const handleAddPrimaryTag = async () => {
     if (!newPrimaryTagName.trim()) {
-      Alert.alert('エラー', 'タグ名を入力してください');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'タグ名を入力してください' });
       return;
     }
 
@@ -148,16 +171,16 @@ export const SettingsScreen: React.FC = () => {
       await loadTags();
       setNewPrimaryTagName('');
       setShowPrimaryAddDialog(false);
-      Alert.alert('成功', 'タグ1を追加しました');
+      setInfoDialog({ visible: true, title: '成功', message: 'タグ1を追加しました' });
     } catch (error: any) {
-      Alert.alert('エラー', error.message || 'タグの追加に失敗しました');
+      setInfoDialog({ visible: true, title: 'エラー', message: error.message || 'タグの追加に失敗しました' });
     }
   };
 
   // タグ2追加
   const handleAddSecondaryTag = async () => {
     if (!newSecondaryTagName.trim()) {
-      Alert.alert('エラー', 'タグ名を入力してください');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'タグ名を入力してください' });
       return;
     }
 
@@ -166,34 +189,30 @@ export const SettingsScreen: React.FC = () => {
       await loadTags();
       setNewSecondaryTagName('');
       setShowSecondaryAddDialog(false);
-      Alert.alert('成功', 'タグ2を追加しました');
+      setInfoDialog({ visible: true, title: '成功', message: 'タグ2を追加しました' });
     } catch (error: any) {
-      Alert.alert('エラー', error.message || 'タグの追加に失敗しました');
+      setInfoDialog({ visible: true, title: 'エラー', message: error.message || 'タグの追加に失敗しました' });
     }
   };
 
   // タグ削除
   const handleDeleteTag = async (id: string) => {
-    Alert.alert(
-      '確認',
-      'このタグを削除しますか?',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '削除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await storageService.deleteTag(id);
-              await loadTags();
-              Alert.alert('成功', 'タグを削除しました');
-            } catch (error: any) {
-              Alert.alert('エラー', 'タグの削除に失敗しました');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmDialog({
+      visible: true,
+      title: '確認',
+      message: 'このタグを削除しますか?',
+      confirmText: '削除',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await storageService.deleteTag(id);
+          await loadTags();
+          setInfoDialog({ visible: true, title: '成功', message: 'タグを削除しました' });
+        } catch (error: any) {
+          setInfoDialog({ visible: true, title: 'エラー', message: 'タグの削除に失敗しました' });
+        }
+      },
+    });
   };
 
   if (isInitializing) {
@@ -471,6 +490,23 @@ export const SettingsScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       <LoadingOverlay visible={loading} message="設定を検証中..." />
+
+      <InfoDialog
+        visible={infoDialog.visible}
+        title={infoDialog.title}
+        message={infoDialog.message}
+        onDismiss={() => setInfoDialog({ ...infoDialog, visible: false })}
+      />
+
+      <ConfirmDialog
+        visible={confirmDialog.visible}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        confirmDestructive={confirmDialog.destructive}
+        onConfirm={confirmDialog.onConfirm}
+        onDismiss={() => setConfirmDialog({ ...confirmDialog, visible: false })}
+      />
     </SafeAreaView>
   );
 };

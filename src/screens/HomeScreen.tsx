@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Text, Menu } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { ErrorDialog } from '../components/ErrorDialog';
 import { AppError, Tag } from '../types';
 import { addFrontmatter } from '../utils/frontmatterParser';
 import { useGitHubConfig } from '../contexts/GitHubConfigContext';
+import { InfoDialog } from '../components/InfoDialog';
+import { ChoiceDialog } from '../components/ChoiceDialog';
 
 interface HomeScreenProps {
   navigation: any;
@@ -28,6 +30,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [selectedSecondaryTag, setSelectedSecondaryTag] = useState<string | undefined>(undefined);
   const [primaryMenuVisible, setPrimaryMenuVisible] = useState(false);
   const [secondaryMenuVisible, setSecondaryMenuVisible] = useState(false);
+
+  // ダイアログ用の状態
+  const [infoDialog, setInfoDialog] = useState<{ visible: boolean; title: string; message: string }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+  const [choiceDialog, setChoiceDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    actions: Array<{ text: string; onPress: () => void }>;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    actions: [],
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -111,22 +131,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const handleSubmit = async () => {
     if (!config) {
-      Alert.alert(
-        '設定が必要です',
-        'GitHub設定を行ってください',
-        [
-          { text: 'キャンセル', style: 'cancel' },
+      setChoiceDialog({
+        visible: true,
+        title: '設定が必要です',
+        message: 'GitHub設定を行ってください',
+        actions: [
           {
             text: '設定画面へ',
             onPress: () => navigation.navigate('Settings'),
           },
-        ]
-      );
+        ],
+      });
       return;
     }
 
     if (!text.trim()) {
-      Alert.alert('エラー', 'テキストを入力してください');
+      setInfoDialog({ visible: true, title: 'エラー', message: 'テキストを入力してください' });
       return;
     }
 
@@ -159,19 +179,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // 入力欄をクリア（タグ選択は維持）
       setText('');
 
-      Alert.alert(
-        '成功',
-        'GitHubに送信しました',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // 必要に応じて履歴画面に遷移
-              // navigation.navigate('History');
-            },
-          },
-        ]
-      );
+      setInfoDialog({ visible: true, title: '成功', message: 'GitHubに送信しました' });
     } catch (error: any) {
       console.error('Submit error:', error);
       const appError: AppError = error as AppError;
@@ -335,6 +343,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onDismiss={() => setError(null)}
         onRetry={error?.retry ? handleRetry : undefined}
         retryEnabled={error?.retry}
+      />
+
+      <InfoDialog
+        visible={infoDialog.visible}
+        title={infoDialog.title}
+        message={infoDialog.message}
+        onDismiss={() => setInfoDialog({ ...infoDialog, visible: false })}
+      />
+
+      <ChoiceDialog
+        visible={choiceDialog.visible}
+        title={choiceDialog.title}
+        message={choiceDialog.message}
+        actions={choiceDialog.actions}
+        onDismiss={() => setChoiceDialog({ ...choiceDialog, visible: false })}
       />
     </SafeAreaView>
   );
