@@ -5,6 +5,14 @@ export interface GitHubConfig {
   repo: string;
   folderPath: string;
   branch: string;
+  geminiApiKey?: string; // Gemini API キー（オプショナル）
+}
+
+// 画像データ
+export interface ImageData {
+  uri: string; // 画像のローカルURI
+  caption: string; // Gemini が生成したキャプション
+  fileName: string; // yyyymmddhhmmss-n.png 形式のファイル名
 }
 
 // 送信履歴のエントリ
@@ -19,6 +27,7 @@ export interface HistoryEntry {
     primary?: string; // カテゴリタグ
     secondary?: string; // 優先度タグなど
   };
+  images?: ImageData[]; // 添付画像データ
 }
 
 // 下書き保存データ

@@ -7,6 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "build:web": "npx expo export --platform web && npm run copy:public && npm run patch:html",
     "copy:public": "cp public/manifest.json dist/ 2>/dev/null; cp public/_redirects dist/ 2>/dev/null; cp public/*.png dist/ 2>/dev/null; true",
     "patch:html": "node scripts/patch-html.js",
@@ -16,12 +19,16 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@google/generative-ai": "^0.24.1",
     "@octokit/rest": "^22.0.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.9",
     "@react-navigation/native": "^7.1.18",
     "buffer": "^6.0.3",
     "expo": "~54.0.13",
+    "expo-file-system": "~19.0.19",
+    "expo-image-manipulator": "~14.0.7",
+    "expo-image-picker": "~17.0.8",
     "expo-secure-store": "^15.0.7",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
@@ -34,7 +41,14 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
+    "babel-jest": "^30.2.0",
+    "babel-preset-expo": "^54.0.7",
+    "jest": "^30.2.0",
+    "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2"
   },
   "private": true

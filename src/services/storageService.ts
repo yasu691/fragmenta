@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GitHubConfig, HistoryEntry, DraftData, AppSettings, Tag } from '../types';
+import { GeminiKeyStore } from '../utils/geminiKeyStore';
 
 // ストレージキー定数
 const KEYS = {
@@ -36,6 +37,38 @@ export class StorageService {
    */
   async clearGitHubConfig(): Promise<void> {
     await AsyncStorage.removeItem(KEYS.GITHUB_CONFIG);
+  }
+
+  // ========== Gemini API キー関連 ==========
+
+  /**
+   * Gemini API キーを保存
+   * - Web: sessionStorage (タブを閉じると揮発)
+   * - Native: SecureStore (端末に永続保存)
+   */
+  saveGeminiApiKey(apiKey: string): void {
+    GeminiKeyStore.set(apiKey);
+  }
+
+  /**
+   * Gemini API キーを取得
+   */
+  getGeminiApiKey(): string | null {
+    return GeminiKeyStore.get();
+  }
+
+  /**
+   * Gemini API キーをクリア
+   */
+  clearGeminiApiKey(): void {
+    GeminiKeyStore.clear();
+  }
+
+  /**
+   * Gemini API キーが設定されているか確認
+   */
+  hasGeminiApiKey(): boolean {
+    return GeminiKeyStore.hasKey();
   }
 
   // ========== 下書き保存関連 ==========
@@ -246,6 +279,7 @@ export class StorageService {
    */
   async clearAll(): Promise<void> {
     await this.clearGitHubConfig();
+    this.clearGeminiApiKey();
     await this.clearDraft();
     await this.clearHistory();
     await AsyncStorage.removeItem(KEYS.SETTINGS);
