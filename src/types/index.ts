@@ -7,6 +7,13 @@ export interface GitHubConfig {
   branch: string;
 }
 
+// 投稿時に付与するタグ
+export interface SelectedTags {
+  primary?: string; // カテゴリタグ
+  secondary?: string; // 優先度タグなど
+  custom?: string[]; // 自由入力のタグ
+}
+
 // 送信履歴のエントリ
 export interface HistoryEntry {
   id: string;
@@ -15,10 +22,7 @@ export interface HistoryEntry {
   createdAt: Date;
   githubUrl?: string;
   tag?: string; // 旧タグ名（下位互換性のため残す）
-  tags?: {
-    primary?: string; // カテゴリタグ
-    secondary?: string; // 優先度タグなど
-  };
+  tags?: SelectedTags;
 }
 
 // 下書き保存データ
