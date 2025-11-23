@@ -30,6 +30,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [selectedSecondaryTag, setSelectedSecondaryTag] = useState<string | undefined>(undefined);
   const [primaryMenuVisible, setPrimaryMenuVisible] = useState(false);
   const [secondaryMenuVisible, setSecondaryMenuVisible] = useState(false);
+  const [customTagsInput, setCustomTagsInput] = useState('');
 
   // ダイアログ用の状態
   const [infoDialog, setInfoDialog] = useState<{ visible: boolean; title: string; message: string }>({
@@ -154,11 +155,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setError(null);
 
     try {
+      const parsedCustomTags = Array.from(
+        new Set(
+          customTagsInput
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0)
+        )
+      );
+
+      const tags =
+        selectedPrimaryTag || selectedSecondaryTag || parsedCustomTags.length > 0
+          ? {
+              primary: selectedPrimaryTag,
+              secondary: selectedSecondaryTag,
+              custom: parsedCustomTags.length ? parsedCustomTags : undefined,
+            }
+          : undefined;
+
       // Frontmatter を追加したコンテンツを作成
-      const tags = {
-        primary: selectedPrimaryTag,
-        secondary: selectedSecondaryTag,
-      };
       const contentWithFrontmatter = addFrontmatter(text, tags);
 
       // GitHubにMarkdownファイルを作成
@@ -312,6 +327,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           )}
 
           <TextInput
+            label="タグを自由入力（カンマ区切り）"
+            value={customTagsInput}
+            onChangeText={setCustomTagsInput}
+            mode="outlined"
+            style={styles.customTagInput}
+            placeholder="例: メモ, アイデア, 調査"
+          />
+
+          <TextInput
             label="メッセージを入力"
             value={text}
             onChangeText={setText}
@@ -390,6 +414,10 @@ const styles = StyleSheet.create({
   textInput: {
     backgroundColor: '#ffffff',
     minHeight: 150,
+    marginBottom: 16,
+  },
+  customTagInput: {
+    backgroundColor: '#ffffff',
     marginBottom: 16,
   },
   button: {

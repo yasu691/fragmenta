@@ -1,3 +1,5 @@
+import { SelectedTags } from '../types';
+
 /**
  * Frontmatter ユーティリティ
  * マークダウンファイルに YAML Frontmatter を追加・パースする
@@ -6,14 +8,14 @@
 /**
  * コンテンツにタグ付き Frontmatter を追加
  * @param content 元のマークダウンコンテンツ
- * @param tags タグオブジェクト { primary?: string, secondary?: string }
+ * @param tags タグオブジェクト { primary?: string, secondary?: string, custom?: string[] }
  * @returns Frontmatter 付きコンテンツ
  */
 export function addFrontmatter(
   content: string,
-  tags?: { primary?: string; secondary?: string }
+  tags?: SelectedTags
 ): string {
-  if (!tags || (!tags.primary && !tags.secondary)) {
+  if (!tags) {
     // タグがない場合はそのまま返す
     return content;
   }
@@ -22,9 +24,23 @@ export function addFrontmatter(
   const tagArray: string[] = [];
   if (tags.primary) tagArray.push(tags.primary);
   if (tags.secondary) tagArray.push(tags.secondary);
+  if (tags.custom?.length) {
+    tagArray.push(...tags.custom.filter(Boolean));
+  }
+
+  if (tagArray.length === 0) {
+    return content;
+  }
+
+  // 重複を排除して整形
+  const normalizedTags = Array.from(new Set(tagArray.map(tag => tag.trim()))).filter(Boolean);
+
+  if (normalizedTags.length === 0) {
+    return content;
+  }
 
   const frontmatter = `---
-tags: [${tagArray.join(', ')}]
+tags: [${normalizedTags.join(', ')}]
 ---
 
 `;
@@ -35,11 +51,11 @@ tags: [${tagArray.join(', ')}]
 /**
  * コンテンツから Frontmatter のタグを抽出
  * @param content マークダウンコンテンツ
- * @returns タグオブジェクト { primary?: string, secondary?: string } または undefined
+ * @returns タグオブジェクト { primary?: string, secondary?: string, custom?: string[] } または undefined
  */
 export function parseFrontmatter(
   content: string
-): { primary?: string; secondary?: string } | undefined {
+): SelectedTags | undefined {
   // Frontmatter のパターン: --- で囲まれた YAML 部分
   const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
   const match = content.match(frontmatterRegex);
@@ -63,8 +79,13 @@ export function parseFrontmatter(
   const tagArray = tagString.split(',').map(tag => tag.trim());
 
   // 配列から primary と secondary を抽出
+  const primary = tagArray[0] || undefined;
+  const secondary = tagArray[1] || undefined;
+  const custom = tagArray.slice(2).filter(Boolean);
+
   return {
-    primary: tagArray[0] || undefined,
-    secondary: tagArray[1] || undefined,
+    primary,
+    secondary,
+    custom: custom.length ? custom : undefined,
   };
 }
