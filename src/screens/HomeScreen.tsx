@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
-import { TextInput, Button, Text, Menu } from 'react-native-paper';
+import { StyleSheet, View, KeyboardAvoidingView, Platform, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { TextInput, Button, Text, Menu, IconButton, Card } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { storageService } from '../services/storageService';
 import { githubService } from '../services/githubService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ErrorDialog } from '../components/ErrorDialog';
-import { AppError, Tag } from '../types';
+import { AppError, Tag, ImageData } from '../types';
 import { addFrontmatter } from '../utils/frontmatterParser';
 import { useGitHubConfig } from '../contexts/GitHubConfigContext';
 import { InfoDialog } from '../components/InfoDialog';
 import { ChoiceDialog } from '../components/ChoiceDialog';
+import { processImage, generateImageFileName } from '../utils/imageProcessor';
+import { initialize as initializeGemini, generateCaptions } from '../services/geminiService';
 
 interface HomeScreenProps {
   navigation: any;
@@ -19,7 +22,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { config } = useGitHubConfig();
-  
+
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
@@ -30,6 +33,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [selectedSecondaryTag, setSelectedSecondaryTag] = useState<string | undefined>(undefined);
   const [primaryMenuVisible, setPrimaryMenuVisible] = useState(false);
   const [secondaryMenuVisible, setSecondaryMenuVisible] = useState(false);
+
+  // 画像関連の state
+  const [selectedImages, setSelectedImages] = useState<ImageData[]>([]);
 
   // ダイアログ用の状態
   const [infoDialog, setInfoDialog] = useState<{ visible: boolean; title: string; message: string }>({
@@ -61,10 +67,61 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       if (config) {
         githubService.initialize(config);
+        // Gemini APIキーが設定されていれば初期化
+        const geminiApiKey = storageService.getGeminiApiKey();
+        if (geminiApiKey) {
+          initializeGemini(geminiApiKey);
+        }
       }
     } catch (error) {
       console.error('Failed to check configuration:', error);
     }
+  };
+
+  // 画像を選択
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        setLoading(true);
+        const now = new Date();
+        const newImages: ImageData[] = [];
+
+        for (let i = 0; i < result.assets.length; i++) {
+          const asset = result.assets[i];
+          // 画像を処理（リサイズ・圧縮）
+          const processedUri = await processImage(asset.uri, 2400, 0.85);
+          // ファイル名生成
+          const fileName = generateImageFileName(selectedImages.length + i + 1, now);
+
+          newImages.push({
+            uri: processedUri,
+            caption: '', // キャプションは後で生成
+            fileName,
+          });
+        }
+
+        setSelectedImages([...selectedImages, ...newImages]);
+      }
+    } catch (error) {
+      console.error('Failed to pick image:', error);
+      setError({
+        message: '画像の選択に失敗しました',
+        retry: false,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 画像を削除
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(selectedImages.filter((_, i) => i !== index));
   };
 
   // 下書きを読み込む
@@ -145,8 +202,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
-    if (!text.trim()) {
-      setInfoDialog({ visible: true, title: 'エラー', message: 'テキストを入力してください' });
+    if (!text.trim() && selectedImages.length === 0) {
+      setInfoDialog({ visible: true, title: 'エラー', message: 'テキストまたは画像を入力してください' });
       return;
     }
 
@@ -154,6 +211,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setError(null);
 
     try {
+      let imagesWithCaptions = selectedImages;
+
+      // 画像がある場合、Geminiでキャプション生成
+      if (selectedImages.length > 0) {
+        const geminiApiKey = storageService.getGeminiApiKey();
+        if (!geminiApiKey) {
+          setChoiceDialog({
+            visible: true,
+            title: 'Gemini API キーが必要です',
+            message: '画像のキャプションを生成するには Gemini API キーが必要です',
+            actions: [
+              {
+                text: '設定画面へ',
+                onPress: () => navigation.navigate('Settings'),
+              },
+            ],
+          });
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const imageUris = selectedImages.map((img) => img.uri);
+          const captions = await generateCaptions(imageUris, text);
+
+          imagesWithCaptions = selectedImages.map((img, index) => ({
+            ...img,
+            caption: captions[index] || '',
+          }));
+        } catch (error: any) {
+          console.error('Caption generation error:', error);
+          setError({
+            message: `キャプション生成に失敗しました: ${error.message}`,
+            retry: false,
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       // Frontmatter を追加したコンテンツを作成
       const tags = {
         primary: selectedPrimaryTag,
@@ -161,8 +258,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       };
       const contentWithFrontmatter = addFrontmatter(text, tags);
 
-      // GitHubにMarkdownファイルを作成
-      const fileUrl = await submitWithRetry(contentWithFrontmatter);
+      // GitHubに Markdown + 画像をアップロード
+      const fileUrl =
+        imagesWithCaptions.length > 0
+          ? await githubService.createMarkdownWithImages(contentWithFrontmatter, imagesWithCaptions)
+          : await submitWithRetry(contentWithFrontmatter);
 
       // 履歴に追加
       await storageService.addHistory({
@@ -171,13 +271,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         createdAt: new Date(),
         githubUrl: fileUrl,
         tags,
+        images: imagesWithCaptions.length > 0 ? imagesWithCaptions : undefined,
       });
 
       // 下書きをクリア
       await storageService.clearDraft();
 
-      // 入力欄をクリア（タグ選択は維持）
+      // 入力欄と画像をクリア（タグ選択は維持）
       setText('');
+      setSelectedImages([]);
 
       setInfoDialog({ visible: true, title: '成功', message: 'GitHubに送信しました' });
     } catch (error: any) {
@@ -323,6 +425,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             placeholder="ここにテキストを入力してください"
           />
 
+          {/* 画像選択ボタン */}
+          <Button
+            mode="outlined"
+            onPress={handlePickImage}
+            style={styles.imageButton}
+            icon="image-plus"
+            disabled={loading}
+          >
+            画像を追加
+          </Button>
+
+          {/* 画像プレビュー */}
+          {selectedImages.length > 0 && (
+            <ScrollView horizontal style={styles.imagePreviewContainer}>
+              {selectedImages.map((image, index) => (
+                <Card key={index} style={styles.imageCard}>
+                  <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                  <IconButton
+                    icon="close-circle"
+                    size={24}
+                    onPress={() => handleRemoveImage(index)}
+                    style={styles.removeImageButton}
+                  />
+                </Card>
+              ))}
+            </ScrollView>
+          )}
+
           <Button
             mode="contained"
             onPress={handleSubmit}
@@ -424,5 +554,27 @@ const styles = StyleSheet.create({
   tagButtonText: {
     color: '#6200ee',
     fontWeight: '500',
+  },
+  imageButton: {
+    marginBottom: 16,
+  },
+  imagePreviewContainer: {
+    marginBottom: 16,
+    flexDirection: 'row',
+  },
+  imageCard: {
+    marginRight: 12,
+    position: 'relative',
+  },
+  imagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ffffff',
   },
 });

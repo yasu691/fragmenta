@@ -12,12 +12,13 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export const SettingsScreen: React.FC = () => {
   const { config: savedConfig, setConfig, clearConfig } = useGitHubConfig();
-  
+
   const [token, setToken] = useState('');
   const [owner, setOwner] = useState('');
   const [repo, setRepo] = useState('');
   const [folderPath, setFolderPath] = useState('');
   const [branch, setBranch] = useState('main');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -69,6 +70,11 @@ export const SettingsScreen: React.FC = () => {
       }
       if (savedConfig) {
         setToken(savedConfig.token);
+      }
+      // Gemini API キーをロード
+      const geminiKey = storageService.getGeminiApiKey();
+      if (geminiKey) {
+        setGeminiApiKey(geminiKey);
       }
     } catch (error) {
       setInfoDialog({ visible: true, title: 'エラー', message: '設定の読み込みに失敗しました' });
@@ -137,6 +143,39 @@ export const SettingsScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveGeminiApiKey = async () => {
+    if (!geminiApiKey.trim()) {
+      setInfoDialog({ visible: true, title: 'エラー', message: 'Gemini API キーを入力してください' });
+      return;
+    }
+
+    try {
+      storageService.saveGeminiApiKey(geminiApiKey);
+      setInfoDialog({
+        visible: true,
+        title: '成功',
+        message: 'Gemini API キーを保存しました',
+      });
+    } catch (error: any) {
+      setInfoDialog({ visible: true, title: 'エラー', message: error.message || 'API キーの保存に失敗しました' });
+    }
+  };
+
+  const handleClearGeminiApiKey = async () => {
+    setConfirmDialog({
+      visible: true,
+      title: '確認',
+      message: 'Gemini API キーをクリアしますか?',
+      confirmText: 'クリア',
+      destructive: true,
+      onConfirm: async () => {
+        storageService.clearGeminiApiKey();
+        setGeminiApiKey('');
+        setInfoDialog({ visible: true, title: '完了', message: 'Gemini API キーをクリアしました' });
+      },
+    });
   };
 
   const handleClear = async () => {
@@ -310,6 +349,52 @@ export const SettingsScreen: React.FC = () => {
           >
             設定をクリア
           </Button>
+        </View>
+
+        <Divider style={styles.divider} />
+
+        {/* Gemini API キー設定セクション */}
+        <View style={styles.section}>
+          <Text variant="titleLarge" style={styles.title}>
+            Gemini API キー設定
+          </Text>
+          <Text variant="bodyMedium" style={styles.description}>
+            画像から自動でキャプションを生成するための Gemini API キーを設定します。
+          </Text>
+          <Text variant="bodySmall" style={styles.hint}>
+            Web版: タブを閉じると削除されます（セッション保存）
+          </Text>
+          <Text variant="bodySmall" style={styles.hint}>
+            ネイティブ版: 端末に安全に保存されます（SecureStore）
+          </Text>
+
+          <TextInput
+            label="Gemini API Key"
+            value={geminiApiKey}
+            onChangeText={setGeminiApiKey}
+            mode="outlined"
+            secureTextEntry
+            placeholder="AIza..."
+            style={styles.input}
+          />
+
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={handleSaveGeminiApiKey}
+              style={styles.saveButton}
+            >
+              API キーを保存
+            </Button>
+
+            <Button
+              mode="outlined"
+              onPress={handleClearGeminiApiKey}
+              style={styles.clearButton}
+            >
+              API キーをクリア
+            </Button>
+          </View>
         </View>
 
         <Divider style={styles.divider} />
