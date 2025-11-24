@@ -16,6 +16,13 @@ export interface ImageData {
   fileName: string; // yyyymmddhhmmss-n.png 形式のファイル名
 }
 
+// 投稿時に付与するタグ
+export interface SelectedTags {
+  primary?: string; // カテゴリタグ
+  secondary?: string; // 優先度タグなど
+  custom?: string[]; // 自由入力のタグ
+}
+
 // 送信履歴のエントリ
 export interface HistoryEntry {
   id: string;
@@ -24,10 +31,7 @@ export interface HistoryEntry {
   createdAt: Date;
   githubUrl?: string;
   tag?: string; // 旧タグ名（下位互換性のため残す）
-  tags?: {
-    primary?: string; // カテゴリタグ
-    secondary?: string; // 優先度タグなど
-  };
+  tags?: SelectedTags;
   images?: ImageData[]; // 添付画像データ
 }
 
