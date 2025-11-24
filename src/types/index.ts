@@ -10,7 +10,8 @@ export interface GitHubConfig {
 
 // 画像データ
 export interface ImageData {
-  uri: string; // 画像のローカルURI
+  uri: string; // 画像のローカルURI（GitHub保存用・低解像度: 1280px）
+  highResUri: string; // 高解像度URI（Gemini分析用: 2400px）
   caption: string; // Gemini が生成したキャプション
   fileName: string; // yyyymmddhhmmss-n.png 形式のファイル名
 }

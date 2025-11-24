@@ -94,13 +94,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         for (let i = 0; i < result.assets.length; i++) {
           const asset = result.assets[i];
-          // 画像を処理（リサイズ・圧縮）
-          const processedUri = await processImage(asset.uri, 2400, 0.85);
+          // 高解像度版（Gemini用: 2400px）
+          const highResUri = await processImage(asset.uri, 2400, 0.85);
+          // 低解像度版（GitHub保存用: 1280px）
+          const lowResUri = await processImage(asset.uri, 1280, 0.85);
           // ファイル名生成
           const fileName = generateImageFileName(selectedImages.length + i + 1, now);
 
           newImages.push({
-            uri: processedUri,
+            uri: lowResUri,
+            highResUri: highResUri,
             caption: '', // キャプションは後で生成
             fileName,
           });
@@ -233,7 +236,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
 
         try {
-          const imageUris = selectedImages.map((img) => img.uri);
+          const imageUris = selectedImages.map((img) => img.highResUri);
           const captions = await generateCaptions(imageUris, text);
 
           imagesWithCaptions = selectedImages.map((img, index) => ({
