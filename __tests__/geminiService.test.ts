@@ -69,7 +69,7 @@ describe('geminiService', () => {
       });
       expect(mockGetGenerativeModel).toHaveBeenCalledWith({ model: 'gemini-2.5-flash' });
       expect(mockGenerateContent).toHaveBeenCalledWith([
-        'この画像について、詳細に説明してください。画像の内容、特徴、色彩、雰囲気、注目すべき要素などを含めて記述してください。',
+        'この画像に含まれるテキスト、数式、コード、図表などの文字情報を優先的に抽出し、実用的に説明してください。画像がスクリーンショットやドキュメントの場合は、表示されている内容を詳しく記述してください。色や雰囲気の説明は最小限にしてください。',
         {
           inlineData: {
             mimeType: 'image/jpeg',
@@ -91,7 +91,7 @@ describe('geminiService', () => {
 
       expect(result).toBe(mockCaption);
       expect(mockGenerateContent).toHaveBeenCalledWith([
-        `この画像について、詳細に説明してください。画像の内容、特徴、色彩、雰囲気、注目すべき要素などを含めて記述してください。\n\n参考情報: ${memo}`,
+        `この画像に含まれるテキスト、数式、コード、図表などの文字情報を優先的に抽出し、実用的に説明してください。画像がスクリーンショットやドキュメントの場合は、表示されている内容を詳しく記述してください。色や雰囲気の説明は最小限にしてください。\n\n参考情報: ${memo}`,
         {
           inlineData: {
             mimeType: 'image/jpeg',

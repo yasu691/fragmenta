@@ -142,7 +142,7 @@ export class GitHubService {
 
           // 相対パスで画像リンクを追加
           const relativeImagePath = `./assets/${year}/${month}/${image.fileName}`;
-          markdownContent += `\n![${image.caption}](${relativeImagePath})\n`;
+          markdownContent += `\n![画像](${relativeImagePath})\n`;
           if (image.caption) {
             markdownContent += `*${image.caption}*\n`;
           }
