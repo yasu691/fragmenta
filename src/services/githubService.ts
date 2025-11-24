@@ -200,12 +200,22 @@ export class GitHubService {
 
         console.log('[GitHub] 画像Base64変換成功 - ファイル名:', image.fileName);
 
+        // バイナリファイルの場合、先にBlobを作成してSHAを取得
+        const { data: blob } = await this.octokit!.git.createBlob({
+          owner: this.config.owner,
+          repo: this.config.repo,
+          content: base64Image,
+          encoding: 'base64',
+        });
+
+        console.log('[GitHub] Blob作成成功 - SHA:', blob.sha);
+
+        // TreeエントリにはBlobのSHAを指定
         treeEntries.push({
           path: imagePath,
           mode: '100644',
           type: 'blob',
-          content: base64Image,
-          encoding: 'base64',
+          sha: blob.sha,
         });
       }
 
