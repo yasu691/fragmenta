@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, FlatList, View, Linking } from 'react-native';
+import { StyleSheet, FlatList, View, Linking, Image, ScrollView } from 'react-native';
 import { Text, Card, IconButton, FAB, Chip } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -156,6 +156,21 @@ export const HistoryScreen: React.FC = () => {
             )}
           </View>
         )}
+        {/* 画像サムネイル表示 */}
+        {item.images && item.images.length > 0 && (
+          <ScrollView horizontal style={styles.imageThumbnailContainer} showsHorizontalScrollIndicator={false}>
+            {item.images.map((image, index) => (
+              <View key={index} style={styles.thumbnailWrapper}>
+                <Image source={{ uri: image.uri }} style={styles.thumbnail} />
+                {image.caption && (
+                  <Text variant="bodySmall" style={styles.thumbnailCaption} numberOfLines={1}>
+                    {image.caption}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        )}
         <Text
           variant="bodyMedium"
           style={styles.contentPreview}
@@ -301,5 +316,24 @@ const styles = StyleSheet.create({
   customTagChip: {
     alignSelf: 'flex-start',
     backgroundColor: '#e8eaf6',
+  },
+  imageThumbnailContainer: {
+    marginBottom: 12,
+    flexDirection: 'row',
+  },
+  thumbnailWrapper: {
+    marginRight: 8,
+  },
+  thumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  thumbnailCaption: {
+    width: 80,
+    marginTop: 4,
+    color: '#666666',
+    fontSize: 10,
   },
 });
