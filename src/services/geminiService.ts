@@ -69,9 +69,9 @@ export const generateCaption = async (
     const base64Image = await imageToBase64(imageUri);
 
     // プロンプトを構築
-    let prompt = 'この画像を1文で説明してください。';
+    let prompt = 'この画像について、詳細に説明してください。画像の内容、特徴、色彩、雰囲気、注目すべき要素などを含めて記述してください。';
     if (memo && memo.trim() !== '') {
-      prompt = `この画像を1文で説明してください。参考情報: ${memo}`;
+      prompt = `この画像について、詳細に説明してください。画像の内容、特徴、色彩、雰囲気、注目すべき要素などを含めて記述してください。\n\n参考情報: ${memo}`;
     }
 
     // コンテンツを生成
