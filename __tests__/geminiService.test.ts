@@ -1,14 +1,11 @@
 import { initialize, generateCaption, isInitialized } from '../src/services/geminiService';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // モックを設定
 jest.mock('@google/generative-ai');
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   readAsStringAsync: jest.fn(),
-  EncodingType: {
-    Base64: 'base64',
-  },
 }));
 
 describe('geminiService', () => {

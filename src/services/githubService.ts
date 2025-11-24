@@ -2,7 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { Buffer } from 'buffer';
 import { GitHubConfig, GitHubCreateFileResponse, AppError, ImageData } from '../types';
 import { formatDateToFileName } from '../utils/dateFormatter';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export class GitHubService {
   private octokit: Octokit | null = null;
