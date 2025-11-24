@@ -184,10 +184,21 @@ export class GitHubService {
           ? `${this.config.folderPath}/assets/${year}/${month}/${image.fileName}`
           : `assets/${year}/${month}/${image.fileName}`;
 
+        console.log('[GitHub] 画像Base64変換開始 - URI:', image.uri);
+
+        // URIの形式を正規化（Androidでは file:// が必要な場合がある）
+        let normalizedUri = image.uri;
+        if (!image.uri.startsWith('file://') && !image.uri.startsWith('content://')) {
+          normalizedUri = `file://${image.uri}`;
+          console.log('[GitHub] URI正規化:', normalizedUri);
+        }
+
         // 画像をBase64に変換
-        const base64Image = await FileSystem.readAsStringAsync(image.uri, {
+        const base64Image = await FileSystem.readAsStringAsync(normalizedUri, {
           encoding: 'base64',
         });
+
+        console.log('[GitHub] 画像Base64変換成功 - ファイル名:', image.fileName);
 
         treeEntries.push({
           path: imagePath,

@@ -24,13 +24,25 @@ export const initialize = (apiKey: string): void => {
  */
 const imageToBase64 = async (imageUri: string): Promise<string> => {
   try {
+    console.log('[Gemini] Base64変換開始 - URI:', imageUri);
+
+    // URIの形式を正規化（Androidでは file:// が必要な場合がある）
+    let normalizedUri = imageUri;
+    if (!imageUri.startsWith('file://') && !imageUri.startsWith('content://')) {
+      normalizedUri = `file://${imageUri}`;
+      console.log('[Gemini] URI正規化:', normalizedUri);
+    }
+
     // expo-file-system を使ってBase64に変換
-    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+    const base64 = await FileSystem.readAsStringAsync(normalizedUri, {
       encoding: 'base64',
     });
+
+    console.log('[Gemini] Base64変換成功 - データサイズ:', base64.length);
     return base64;
   } catch (error) {
-    console.error('Base64変換エラー:', error);
+    console.error('[Gemini] Base64変換エラー - URI:', imageUri);
+    console.error('[Gemini] エラー詳細:', error);
     throw new Error(`画像のBase64変換に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
   }
 };

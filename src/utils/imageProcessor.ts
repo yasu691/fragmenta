@@ -53,6 +53,8 @@ export const processImage = async (
   quality: number = 0.85
 ): Promise<string> => {
   try {
+    console.log('[ImageProcessor] 画像処理開始 - 元URI:', uri);
+
     // 画像を処理（リサイズと圧縮）
     const result = await ImageManipulator.manipulateAsync(
       uri,
@@ -70,9 +72,11 @@ export const processImage = async (
       }
     );
 
+    console.log('[ImageProcessor] 画像処理完了 - 処理後URI:', result.uri);
     return result.uri;
   } catch (error) {
-    console.error('画像処理エラー:', error);
+    console.error('[ImageProcessor] 画像処理エラー - 元URI:', uri);
+    console.error('[ImageProcessor] エラー詳細:', error);
     throw new Error(`画像処理に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
   }
 };
