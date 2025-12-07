@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, KeyboardAvoidingView, Platform, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { TextInput, Button, Text, Menu, IconButton, Card } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -55,6 +55,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     message: '',
     actions: [],
   });
+
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -333,7 +335,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <View style={styles.content}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
           {!config && (
             <View style={styles.warningBanner}>
               <Text variant="bodyMedium" style={styles.warningText}>
@@ -446,6 +453,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             value={text}
             onChangeText={setText}
             onKeyPress={handleKeyPress}
+            onFocus={() => {
+              setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 300);
+            }}
             mode="outlined"
             multiline
             numberOfLines={8}
@@ -491,6 +503,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             GitHubに送信
           </Button>
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       <LoadingOverlay visible={loading} message="GitHubに送信中..." />
@@ -529,10 +542,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+  },
+  content: {
+    padding: 20,
   },
   warningBanner: {
     backgroundColor: '#fff3cd',
